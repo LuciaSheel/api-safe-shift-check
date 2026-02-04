@@ -17,6 +17,23 @@ import {
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
+// Convert time string to seconds for jwt.sign
+function parseExpiresIn(value: string): number {
+  const match = value.match(/^(\d+)([dhms])$/);
+  if (match) {
+    const num = parseInt(match[1]);
+    switch (match[2]) {
+      case 'd': return num * 86400;
+      case 'h': return num * 3600;
+      case 'm': return num * 60;
+      case 's': return num;
+    }
+  }
+  return 604800; // Default: 7 days in seconds
+}
+
+const JWT_EXPIRES_SECONDS = parseExpiresIn(JWT_EXPIRES_IN);
+
 // Demo credentials - these bypass password verification for development
 const DEMO_CREDENTIALS: Record<string, string> = {
   'sarah.johnson@example.com': 'demo123',
@@ -162,11 +179,10 @@ export class AuthService {
       Role: user.Role,
     };
 
-    const options: SignOptions = {
-      expiresIn: JWT_EXPIRES_IN,
-    };
-
-    return jwt.sign(payload, JWT_SECRET, options);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return jwt.sign(payload, JWT_SECRET, {
+      expiresIn: JWT_EXPIRES_SECONDS,
+    });
   }
 
   private getTokenExpiration(): string {
