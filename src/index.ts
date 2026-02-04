@@ -20,8 +20,12 @@ const app: Application = express();
 
 // Configuration
 const PORT = process.env.PORT || 3001;
-const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
 const NODE_ENV = process.env.NODE_ENV || 'development';
+
+// CORS origins - allow multiple localhost ports for development
+const CORS_ORIGINS = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',')
+  : ['http://localhost:5173', 'http://localhost:8080', 'http://localhost:8081', 'http://localhost:3000'];
 
 // ============================================
 // MIDDLEWARE
@@ -33,7 +37,7 @@ app.use(helmet());
 // CORS configuration
 app.use(
   cors({
-    origin: CORS_ORIGIN,
+    origin: CORS_ORIGINS,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
@@ -79,7 +83,7 @@ const server = app.listen(PORT, () => {
   console.log('╠════════════════════════════════════════════╣');
   console.log(`║  Environment: ${NODE_ENV.padEnd(28)}║`);
   console.log(`║  Port: ${PORT.toString().padEnd(35)}║`);
-  console.log(`║  CORS Origin: ${CORS_ORIGIN.padEnd(28)}║`);
+  console.log(`║  CORS Origins: ${CORS_ORIGINS.length} configured`.padEnd(44) + '║');
   console.log('║                                            ║');
   console.log('╠════════════════════════════════════════════╣');
   console.log('║  API Endpoints:                            ║');

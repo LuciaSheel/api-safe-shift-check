@@ -194,6 +194,13 @@ export class AuthService {
     }
     return now.toISOString();
   }
+
+  /**
+   * Get user by ID (for profile retrieval)
+   */
+  async getUserById(userId: string): Promise<User | null> {
+    return userRepository.findById(userId);
+  }
 }
 
 // Export singleton instance

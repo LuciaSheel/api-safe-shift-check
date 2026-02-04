@@ -132,12 +132,23 @@ export class AuthController {
 
   async me(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const user = (req as Request & { user?: { UserId: string; Email: string; Role: string } }).user;
+      const jwtUser = (req as Request & { user?: { UserId: string; Email: string; Role: string } }).user;
 
-      if (!user) {
+      if (!jwtUser) {
         res.status(401).json({
           Success: false,
           Message: 'Unauthorized',
+        });
+        return;
+      }
+
+      // Fetch full user profile from database
+      const user = await authService.getUserById(jwtUser.UserId);
+      
+      if (!user) {
+        res.status(404).json({
+          Success: false,
+          Message: 'User not found',
         });
         return;
       }

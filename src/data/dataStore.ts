@@ -29,7 +29,7 @@ export const users: User[] = [
   {
     Id: 'user-001',
     Email: 'sarah.johnson@example.com',
-    Password: '$2a$10$rHKjPMKJ6Y0J8Y8JQK6q6uQK6q6uQK6q6uQK6q6uQK6q6uQK6q', // demo123
+    Password: '$2a$10$HLQQdXE5POxTARPOa5BkZ.4NiZ./YheecV.1J9pc98SbSsvZETnnm', // demo123
     FirstName: 'Sarah',
     LastName: 'Johnson',
     Role: 'Worker',
@@ -41,7 +41,7 @@ export const users: User[] = [
   {
     Id: 'user-002',
     Email: 'mike.chen@example.com',
-    Password: '$2a$10$rHKjPMKJ6Y0J8Y8JQK6q6uQK6q6uQK6q6uQK6q6uQK6q6uQK6q',
+    Password: '$2a$10$HLQQdXE5POxTARPOa5BkZ.4NiZ./YheecV.1J9pc98SbSsvZETnnm', // demo123
     FirstName: 'Mike',
     LastName: 'Chen',
     Role: 'Worker',
@@ -53,7 +53,7 @@ export const users: User[] = [
   {
     Id: 'user-003',
     Email: 'emma.wilson@example.com',
-    Password: '$2a$10$rHKjPMKJ6Y0J8Y8JQK6q6uQK6q6uQK6q6uQK6q6uQK6q6uQK6q',
+    Password: '$2a$10$HLQQdXE5POxTARPOa5BkZ.4NiZ./YheecV.1J9pc98SbSsvZETnnm', // demo123
     FirstName: 'Emma',
     LastName: 'Wilson',
     Role: 'Worker',
@@ -65,7 +65,7 @@ export const users: User[] = [
   {
     Id: 'user-004',
     Email: 'james.brown@example.com',
-    Password: '$2a$10$rHKjPMKJ6Y0J8Y8JQK6q6uQK6q6uQK6q6uQK6q6uQK6q6uQK6q',
+    Password: '$2a$10$HLQQdXE5POxTARPOa5BkZ.4NiZ./YheecV.1J9pc98SbSsvZETnnm', // demo123
     FirstName: 'James',
     LastName: 'Brown',
     Role: 'Worker',
@@ -77,7 +77,7 @@ export const users: User[] = [
   {
     Id: 'user-005',
     Email: 'lisa.martinez@example.com',
-    Password: '$2a$10$rHKjPMKJ6Y0J8Y8JQK6q6uQK6q6uQK6q6uQK6q6uQK6q6uQK6q',
+    Password: '$2a$10$HLQQdXE5POxTARPOa5BkZ.4NiZ./YheecV.1J9pc98SbSsvZETnnm', // demo123
     FirstName: 'Lisa',
     LastName: 'Martinez',
     Role: 'Worker',
@@ -89,7 +89,7 @@ export const users: User[] = [
   {
     Id: 'user-006',
     Email: 'david.taylor@example.com',
-    Password: '$2a$10$rHKjPMKJ6Y0J8Y8JQK6q6uQK6q6uQK6q6uQK6q6uQK6q6uQK6q',
+    Password: '$2a$10$HLQQdXE5POxTARPOa5BkZ.4NiZ./YheecV.1J9pc98SbSsvZETnnm', // demo123
     FirstName: 'David',
     LastName: 'Taylor',
     Role: 'BackupContact',
@@ -101,7 +101,7 @@ export const users: User[] = [
   {
     Id: 'user-007',
     Email: 'jennifer.garcia@example.com',
-    Password: '$2a$10$rHKjPMKJ6Y0J8Y8JQK6q6uQK6q6uQK6q6uQK6q6uQK6q6uQK6q',
+    Password: '$2a$10$HLQQdXE5POxTARPOa5BkZ.4NiZ./YheecV.1J9pc98SbSsvZETnnm', // demo123
     FirstName: 'Jennifer',
     LastName: 'Garcia',
     Role: 'BackupContact',
@@ -113,7 +113,7 @@ export const users: User[] = [
   {
     Id: 'user-008',
     Email: 'robert.anderson@example.com',
-    Password: '$2a$10$rHKjPMKJ6Y0J8Y8JQK6q6uQK6q6uQK6q6uQK6q6uQK6q6uQK6q',
+    Password: '$2a$10$HLQQdXE5POxTARPOa5BkZ.4NiZ./YheecV.1J9pc98SbSsvZETnnm', // demo123
     FirstName: 'Robert',
     LastName: 'Anderson',
     Role: 'Manager',
@@ -125,7 +125,7 @@ export const users: User[] = [
   {
     Id: 'user-009',
     Email: 'maria.rodriguez@example.com',
-    Password: '$2a$10$rHKjPMKJ6Y0J8Y8JQK6q6uQK6q6uQK6q6uQK6q6uQK6q6uQK6q',
+    Password: '$2a$10$HLQQdXE5POxTARPOa5BkZ.4NiZ./YheecV.1J9pc98SbSsvZETnnm', // demo123
     FirstName: 'Maria',
     LastName: 'Rodriguez',
     Role: 'Manager',
@@ -137,7 +137,7 @@ export const users: User[] = [
   {
     Id: 'user-010',
     Email: 'admin@safealone.com',
-    Password: '$2a$10$rHKjPMKJ6Y0J8Y8JQK6q6uQK6q6uQK6q6uQK6q6uQK6q6uQK6q', // admin123
+    Password: '$2a$10$oiZB.MnuLKL19oKPR5226On3HvPSrevepS1cgS3Tqowg2u94xcOgS', // admin123
     FirstName: 'System',
     LastName: 'Administrator',
     Role: 'Administrator',
