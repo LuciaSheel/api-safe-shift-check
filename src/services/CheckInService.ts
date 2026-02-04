@@ -1,0 +1,201 @@
+/**
+ * CheckIn Service
+ * Handles check-in business logic
+ */
+
+import { 
+  checkInRepository, 
+  shiftRepository, 
+  alertRepository,
+  notificationRepository,
+  userRepository,
+  systemSettingsRepository
+} from '../repositories';
+import {
+  CheckIn,
+  CreateCheckInDto,
+  UpdateCheckInDto,
+  CheckInFilter,
+  PaginatedResponse,
+} from '../types';
+
+export class CheckInService {
+  
+  async findAll(filter?: CheckInFilter): Promise<PaginatedResponse<CheckIn>> {
+    return checkInRepository.findAll(filter);
+  }
+
+  async findById(id: string): Promise<CheckIn | null> {
+    return checkInRepository.findById(id);
+  }
+
+  async create(data: CreateCheckInDto): Promise<CheckIn> {
+    // Validate shift exists and is active
+    const shift = await shiftRepository.findById(data.ShiftId);
+    if (!shift) {
+      throw new Error('Shift not found');
+    }
+    if (shift.Status !== 'Active') {
+      throw new Error('Shift is not active');
+    }
+
+    // Validate worker matches shift
+    if (shift.WorkerId !== data.WorkerId) {
+      throw new Error('Worker does not match shift');
+    }
+
+    return checkInRepository.create(data);
+  }
+
+  async update(id: string, data: UpdateCheckInDto): Promise<CheckIn | null> {
+    const exists = await checkInRepository.exists(id);
+    if (!exists) {
+      return null;
+    }
+
+    return checkInRepository.update(id, data);
+  }
+
+  async delete(id: string): Promise<boolean> {
+    return checkInRepository.delete(id);
+  }
+
+  async confirmCheckIn(id: string): Promise<CheckIn | null> {
+    const checkIn = await checkInRepository.findById(id);
+    if (!checkIn) {
+      return null;
+    }
+
+    if (checkIn.Status !== 'Pending') {
+      throw new Error('Check-in is not pending');
+    }
+
+    // Calculate response time
+    const scheduledTime = new Date(checkIn.ScheduledTime).getTime();
+    const responseTime = Date.now();
+    const responseSeconds = Math.round((responseTime - scheduledTime) / 1000);
+
+    return checkInRepository.confirmCheckIn(id, Math.max(0, responseSeconds));
+  }
+
+  async markAsMissed(id: string): Promise<CheckIn | null> {
+    const checkIn = await checkInRepository.findById(id);
+    if (!checkIn) {
+      return null;
+    }
+
+    if (checkIn.Status !== 'Pending') {
+      throw new Error('Check-in is not pending');
+    }
+
+    // Mark check-in as missed
+    const missedCheckIn = await checkInRepository.markAsMissed(id);
+
+    if (missedCheckIn) {
+      // Create alert for missed check-in
+      await this.createMissedCheckInAlert(missedCheckIn);
+    }
+
+    return missedCheckIn;
+  }
+
+  async scheduleCheckIn(shiftId: string): Promise<CheckIn> {
+    const shift = await shiftRepository.findById(shiftId);
+    if (!shift) {
+      throw new Error('Shift not found');
+    }
+
+    const settings = await systemSettingsRepository.get();
+    const intervalMinutes = shift.CheckInIntervalMinutes || settings.CheckInIntervalMinutes;
+    
+    const scheduledTime = new Date(Date.now() + intervalMinutes * 60 * 1000);
+
+    return checkInRepository.create({
+      ShiftId: shiftId,
+      WorkerId: shift.WorkerId,
+      ScheduledTime: scheduledTime.toISOString(),
+    });
+  }
+
+  async getCheckInsByShiftId(shiftId: string): Promise<CheckIn[]> {
+    return checkInRepository.findByShiftId(shiftId);
+  }
+
+  async getCheckInsByWorkerId(workerId: string): Promise<CheckIn[]> {
+    return checkInRepository.findByWorkerId(workerId);
+  }
+
+  async getPendingCheckIns(): Promise<CheckIn[]> {
+    return checkInRepository.findPendingCheckIns();
+  }
+
+  async getAverageResponseTime(workerId?: string): Promise<number> {
+    return checkInRepository.getAverageResponseTime(workerId);
+  }
+
+  async count(filter?: CheckInFilter): Promise<number> {
+    return checkInRepository.count(filter);
+  }
+
+  async processOverdueCheckIns(): Promise<number> {
+    const settings = await systemSettingsRepository.get();
+    const timeoutMs = settings.ResponseTimeoutSeconds * 1000;
+    const now = Date.now();
+
+    const pendingCheckIns = await checkInRepository.findPendingCheckIns();
+    let processedCount = 0;
+
+    for (const checkIn of pendingCheckIns) {
+      const scheduledTime = new Date(checkIn.ScheduledTime).getTime();
+      if (now - scheduledTime > timeoutMs) {
+        await this.markAsMissed(checkIn.Id);
+        processedCount++;
+      }
+    }
+
+    return processedCount;
+  }
+
+  private async createMissedCheckInAlert(checkIn: CheckIn): Promise<void> {
+    const shift = await shiftRepository.findById(checkIn.ShiftId);
+    if (!shift) return;
+
+    const worker = await userRepository.findById(checkIn.WorkerId);
+    if (!worker) return;
+
+    // Get backup contact
+    const backupContactId = worker.AssignedBackupContactIds?.[0];
+
+    // Create alert
+    await alertRepository.create({
+      ShiftId: checkIn.ShiftId,
+      WorkerId: checkIn.WorkerId,
+      BackupContactId: backupContactId,
+      Type: 'MissedCheckIn',
+      Severity: 'High',
+      Message: `${worker.FirstName} ${worker.LastName} missed a check-in`,
+    });
+
+    // Create notification for worker
+    await notificationRepository.create({
+      UserId: checkIn.WorkerId,
+      Type: 'CheckIn',
+      Title: 'Missed Check-In',
+      Message: 'You missed a scheduled check-in. Please respond immediately.',
+    });
+
+    // Create notification for backup contact if assigned
+    if (backupContactId) {
+      await notificationRepository.create({
+        UserId: backupContactId,
+        Type: 'Alert',
+        Title: 'Worker Alert',
+        Message: `${worker.FirstName} ${worker.LastName} has missed a check-in`,
+        ActionUrl: '/backup',
+      });
+    }
+  }
+}
+
+// Export singleton instance
+export const checkInService = new CheckInService();
