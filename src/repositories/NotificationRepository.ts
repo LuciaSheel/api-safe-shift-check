@@ -35,8 +35,8 @@ export class NotificationRepository implements IBaseRepository<Notification, Cre
       if (filter.SortBy) {
         const sortOrder = filter.SortOrder === 'desc' ? -1 : 1;
         filteredNotifications.sort((a, b) => {
-          const aVal = (a as Record<string, unknown>)[filter.SortBy!];
-          const bVal = (b as Record<string, unknown>)[filter.SortBy!];
+          const aVal = (a as unknown as Record<string, unknown>)[filter.SortBy!];
+          const bVal = (b as unknown as Record<string, unknown>)[filter.SortBy!];
           if (typeof aVal === 'string' && typeof bVal === 'string') {
             return aVal.localeCompare(bVal) * sortOrder;
           }

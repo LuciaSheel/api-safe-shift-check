@@ -4,7 +4,7 @@
  */
 
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { userRepository } from '../repositories';
 import { 
   User, 
@@ -162,9 +162,11 @@ export class AuthService {
       Role: user.Role,
     };
 
-    return jwt.sign(payload, JWT_SECRET, {
+    const options: SignOptions = {
       expiresIn: JWT_EXPIRES_IN,
-    });
+    };
+
+    return jwt.sign(payload, JWT_SECRET, options);
   }
 
   private getTokenExpiration(): string {
