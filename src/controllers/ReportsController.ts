@@ -191,6 +191,25 @@ export class ReportsController {
       next(error);
     }
   }
+
+  async exportShiftsCsv(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const filter: ReportFilter = {
+        StartDate: req.query.StartDate as string | undefined,
+        EndDate: req.query.EndDate as string | undefined,
+        WorkerId: req.query.WorkerId as string | undefined,
+        LocationId: req.query.LocationId as string | undefined,
+      };
+
+      const csv = await reportsService.exportShiftsCsv(filter);
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=shifts.csv');
+      res.send(csv);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 // Export singleton instance

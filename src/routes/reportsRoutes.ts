@@ -111,4 +111,15 @@ router.get(
   reportsController.exportComplianceCsv.bind(reportsController)
 );
 
+/**
+ * @route   GET /api/reports/export/shifts
+ * @desc    Export shifts report as CSV
+ * @access  Private (Manager, Admin)
+ */
+router.get(
+  '/export/shifts',
+  requireManagerOrAdmin,
+  reportsController.exportShiftsCsv.bind(reportsController)
+);
+
 export default router;

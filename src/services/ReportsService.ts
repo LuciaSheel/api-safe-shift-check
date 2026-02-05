@@ -171,6 +171,52 @@ export class ReportsService {
 
     return [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
   }
+
+  async exportShiftsCsv(filter?: ReportFilter): Promise<string> {
+    const result = await this.getShiftReports(filter);
+    
+    const headers = [
+      'Shift ID',
+      'Worker Name',
+      'Worker ID',
+      'Location',
+      'Location ID',
+      'Start Time',
+      'End Time',
+      'Duration (h:mm)',
+      'Status',
+      'Total Check-Ins',
+      'On-Time Check-Ins',
+      'Late Check-Ins',
+      'Missed Check-Ins',
+      'Alerts',
+    ];
+
+    const formatDuration = (minutes: number): string => {
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      return `${hours}:${mins.toString().padStart(2, '0')}`;
+    };
+
+    const rows = result.Items.map(r => [
+      r.ShiftId,
+      `"${r.WorkerName}"`,
+      r.WorkerId,
+      `"${r.LocationName}"`,
+      r.LocationId,
+      r.StartTime,
+      r.EndTime || '',
+      formatDuration(r.Duration),
+      r.Status,
+      r.TotalCheckIns.toString(),
+      r.OnTimeCheckIns.toString(),
+      r.LateCheckIns.toString(),
+      r.MissedCheckIns.toString(),
+      r.Alerts.toString(),
+    ]);
+
+    return [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  }
 }
 
 // Export singleton instance
