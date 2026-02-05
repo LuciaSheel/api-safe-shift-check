@@ -3,15 +3,20 @@
  * Handles authentication business logic
  */
 
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt, { SignOptions } from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
 import { userRepository } from '../repositories';
+import { dataStore } from '../data/dataStore';
+import { emailService } from './EmailService';
 import { 
   User, 
   LoginCredentials, 
   AuthResponse, 
   TokenPayload,
-  CreateUserDto 
+  CreateUserDto,
+  PasswordResetToken,
 } from '../types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
@@ -129,16 +134,100 @@ export class AuthService {
   async resetPassword(email: string): Promise<boolean> {
     const user = await userRepository.findByEmail(email);
     if (!user) {
-      // Don't reveal if email exists
+      // Don't reveal if email exists - still return success
       return true;
     }
 
-    // In a real implementation, this would:
-    // 1. Generate a reset token
-    // 2. Store the token with expiration
-    // 3. Send an email with the reset link
+    // Generate a secure random token
+    const token = crypto.randomBytes(32).toString('hex');
+    
+    // Token expires in 1 hour
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1);
 
-    console.log(`Password reset requested for ${email}`);
+    // Invalidate any existing reset tokens for this user
+    const existingIndex = dataStore.passwordResetTokens.findIndex(
+      t => t.UserId === user.Id && !t.UsedAt
+    );
+    if (existingIndex !== -1) {
+      dataStore.passwordResetTokens.splice(existingIndex, 1);
+    }
+
+    // Store the new reset token
+    const resetToken: PasswordResetToken = {
+      Id: uuidv4(),
+      UserId: user.Id,
+      Token: token,
+      Email: email,
+      ExpiresAt: expiresAt.toISOString(),
+      CreatedAt: new Date().toISOString(),
+    };
+    dataStore.passwordResetTokens.push(resetToken);
+
+    // Send the password reset email
+    const emailResult = await emailService.sendPasswordResetEmail(email, token);
+    
+    if (!emailResult.success) {
+      console.error('Failed to send password reset email:', emailResult.error);
+      // Still return true to not reveal if email exists
+    }
+
+    return true;
+  }
+
+  /**
+   * Verify a password reset token is valid
+   */
+  async verifyResetToken(token: string): Promise<{ valid: boolean; email?: string }> {
+    const resetToken = dataStore.passwordResetTokens.find(
+      t => t.Token === token && !t.UsedAt
+    );
+
+    if (!resetToken) {
+      return { valid: false };
+    }
+
+    // Check if token has expired
+    if (new Date(resetToken.ExpiresAt) < new Date()) {
+      return { valid: false };
+    }
+
+    return { valid: true, email: resetToken.Email };
+  }
+
+  /**
+   * Complete password reset with token and new password
+   */
+  async completePasswordReset(token: string, newPassword: string): Promise<boolean> {
+    const resetToken = dataStore.passwordResetTokens.find(
+      t => t.Token === token && !t.UsedAt
+    );
+
+    if (!resetToken) {
+      throw new Error('Invalid or expired reset token');
+    }
+
+    // Check if token has expired
+    if (new Date(resetToken.ExpiresAt) < new Date()) {
+      throw new Error('Reset token has expired');
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the password (this also increments TokenVersion)
+    const updated = await userRepository.updatePassword(resetToken.UserId, hashedPassword);
+    
+    if (!updated) {
+      throw new Error('Failed to update password');
+    }
+
+    // Mark the token as used
+    resetToken.UsedAt = new Date().toISOString();
+
+    // Send confirmation email
+    await emailService.sendPasswordChangedEmail(resetToken.Email);
+
     return true;
   }
 

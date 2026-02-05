@@ -175,6 +175,16 @@ export interface ChartDataPoint {
 // AUTH INTERFACES
 // ============================================
 
+export interface PasswordResetToken {
+  Id: string;
+  UserId: string;
+  Token: string;
+  Email: string;
+  ExpiresAt: string;
+  UsedAt?: string;
+  CreatedAt: string;
+}
+
 export interface AuthState {
   User: User | null;
   IsAuthenticated: boolean;

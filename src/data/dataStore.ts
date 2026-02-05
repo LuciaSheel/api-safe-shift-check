@@ -16,6 +16,7 @@ import {
   TimeTrackingRecord,
   ComplianceRecord,
   ChartDataPoint,
+  PasswordResetToken,
 } from '../types';
 
 // ============================================
@@ -648,6 +649,7 @@ class DataStore {
   public complianceTrendData: ChartDataPoint[] = complianceTrendData;
   public alertsByTypeData: ChartDataPoint[] = alertsByTypeData;
   public activeWorkersData: ChartDataPoint[] = activeWorkersData;
+  public passwordResetTokens: PasswordResetToken[] = [];
 
   /**
    * Reset all data to initial state (useful for testing)
@@ -663,6 +665,7 @@ class DataStore {
     this.systemSettings = { ...systemSettings };
     this.timeTrackingRecords = [...timeTrackingRecords];
     this.complianceRecords = [...complianceRecords];
+    this.passwordResetTokens = [];
   }
 }
 

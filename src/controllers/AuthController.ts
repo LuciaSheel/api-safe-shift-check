@@ -185,6 +185,60 @@ export class AuthController {
       next(error);
     }
   }
+
+  async verifyResetToken(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { token } = req.params;
+
+      const result = await authService.verifyResetToken(token);
+
+      if (!result.valid) {
+        res.status(400).json({
+          Success: false,
+          Message: 'Invalid or expired reset token',
+        });
+        return;
+      }
+
+      res.json({
+        Success: true,
+        Data: { Email: result.email },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async completePasswordReset(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { Token, NewPassword } = req.body;
+
+      if (!Token || !NewPassword) {
+        res.status(400).json({
+          Success: false,
+          Message: 'Token and new password are required',
+        });
+        return;
+      }
+
+      if (NewPassword.length < 8) {
+        res.status(400).json({
+          Success: false,
+          Message: 'Password must be at least 8 characters long',
+        });
+        return;
+      }
+
+      await authService.completePasswordReset(Token, NewPassword);
+
+      res.json({
+        Success: true,
+        Message: 'Password has been reset successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 // Export singleton instance

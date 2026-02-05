@@ -53,6 +53,20 @@ router.post(
 router.post('/reset-password', authController.resetPassword.bind(authController));
 
 /**
+ * @route   GET /api/auth/reset-password/:token
+ * @desc    Verify password reset token
+ * @access  Public
+ */
+router.get('/reset-password/:token', authController.verifyResetToken.bind(authController));
+
+/**
+ * @route   POST /api/auth/reset-password/complete
+ * @desc    Complete password reset with new password
+ * @access  Public
+ */
+router.post('/reset-password/complete', authController.completePasswordReset.bind(authController));
+
+/**
  * @route   GET /api/auth/me
  * @desc    Get current user profile
  * @access  Private
