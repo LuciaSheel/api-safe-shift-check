@@ -38,6 +38,13 @@ router.get(
 router.get('/count', notificationController.countUnread.bind(notificationController));
 
 /**
+ * @route   GET /api/notifications/my
+ * @desc    Get notifications for current user
+ * @access  Private
+ */
+router.get('/my', notificationController.getMyNotifications.bind(notificationController));
+
+/**
  * @route   GET /api/notifications/:id
  * @desc    Get notification by ID
  * @access  Private

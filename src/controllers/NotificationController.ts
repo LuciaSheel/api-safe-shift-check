@@ -188,6 +188,33 @@ export class NotificationController {
     }
   }
 
+  async getMyNotifications(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as Request & { user?: { UserId: string } }).user?.UserId;
+
+      if (!userId) {
+        res.status(401).json({
+          Success: false,
+          Message: 'User not authenticated',
+        });
+        return;
+      }
+
+      const notifications = await notificationService.getNotificationsByUserId(userId);
+
+      res.json({
+        Success: true,
+        Data: notifications,
+        Total: notifications.length,
+        Page: 1,
+        PageSize: notifications.length,
+        TotalPages: 1,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async countUnread(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.params.userId || (req as Request & { user?: { UserId: string } }).user?.UserId;
