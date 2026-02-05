@@ -102,15 +102,15 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
 }
 
 /**
- * Require manager or admin role
+ * Require admin role (for reports access)
  */
 export function requireManagerOrAdmin(req: Request, res: Response, next: NextFunction): void {
-  authorize('Manager', 'Administrator')(req, res, next);
+  authorize('Administrator')(req, res, next);
 }
 
 /**
- * Require worker role (or higher)
+ * Any authenticated user can do shifts
  */
 export function requireWorker(req: Request, res: Response, next: NextFunction): void {
-  authorize('Worker', 'BackupContact', 'Manager', 'Administrator')(req, res, next);
+  authorize('Cleaner', 'Booker', 'Director', 'BackupContact', 'Administrator')(req, res, next);
 }

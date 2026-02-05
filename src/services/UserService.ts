@@ -74,7 +74,9 @@ export class UserService {
   }
 
   async getWorkers(filter?: UserFilter): Promise<PaginatedResponse<User>> {
-    return userRepository.findAll({ ...filter, Role: 'Worker' });
+    // Get all users who can do shifts (everyone except pure admins can be filtered here)
+    // For backwards compatibility, return Cleaners by default
+    return userRepository.findAll({ ...filter, Role: 'Cleaner' });
   }
 
   async getBackupContacts(filter?: UserFilter): Promise<PaginatedResponse<User>> {
@@ -82,7 +84,7 @@ export class UserService {
   }
 
   async getManagers(filter?: UserFilter): Promise<PaginatedResponse<User>> {
-    return userRepository.findAll({ ...filter, Role: 'Manager' });
+    return userRepository.findAll({ ...filter, Role: 'Director' });
   }
 
   async getAdministrators(filter?: UserFilter): Promise<PaginatedResponse<User>> {
@@ -93,11 +95,11 @@ export class UserService {
     const worker = await userRepository.findById(workerId);
     const backupContact = await userRepository.findById(backupContactId);
 
-    if (!worker || worker.Role !== 'Worker') {
-      throw new Error('Worker not found');
+    if (!worker) {
+      throw new Error('User not found');
     }
 
-    if (!backupContact || backupContact.Role !== 'BackupContact') {
+    if (!backupContact) {
       throw new Error('Backup contact not found');
     }
 

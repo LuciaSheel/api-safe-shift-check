@@ -26,10 +26,10 @@ export class TeamService {
     // Validate manager exists and has appropriate role
     const manager = await userRepository.findById(data.ManagerId);
     if (!manager) {
-      throw new Error('Manager not found');
+      throw new Error('Director not found');
     }
-    if (manager.Role !== 'Manager' && manager.Role !== 'Administrator') {
-      throw new Error('User is not a manager');
+    if (manager.Role !== 'Director' && manager.Role !== 'Administrator') {
+      throw new Error('User is not a director');
     }
 
     // Validate all member IDs exist
@@ -67,10 +67,10 @@ export class TeamService {
     if (data.ManagerId && data.ManagerId !== team.ManagerId) {
       const newManager = await userRepository.findById(data.ManagerId);
       if (!newManager) {
-        throw new Error('New manager not found');
+        throw new Error('New director not found');
       }
-      if (newManager.Role !== 'Manager' && newManager.Role !== 'Administrator') {
-        throw new Error('User is not a manager');
+      if (newManager.Role !== 'Director' && newManager.Role !== 'Administrator') {
+        throw new Error('User is not a director');
       }
 
       // Remove TeamId from old manager

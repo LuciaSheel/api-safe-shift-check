@@ -51,7 +51,7 @@ export const registerValidation = [
   body('Phone').notEmpty().withMessage('Phone number is required'),
   body('Role')
     .optional()
-    .isIn(['Worker', 'BackupContact', 'Manager', 'Administrator'])
+    .isIn(['Cleaner', 'Booker', 'Director', 'BackupContact', 'Administrator'])
     .withMessage('Invalid role'),
 ];
 
@@ -74,7 +74,7 @@ export const createUserValidation = [
   body('FirstName').notEmpty().withMessage('First name is required'),
   body('LastName').notEmpty().withMessage('Last name is required'),
   body('Role')
-    .isIn(['Worker', 'BackupContact', 'Manager', 'Administrator'])
+    .isIn(['Cleaner', 'Booker', 'Director', 'BackupContact', 'Administrator'])
     .withMessage('Invalid role'),
   body('Phone').notEmpty().withMessage('Phone number is required'),
 ];

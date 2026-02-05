@@ -32,11 +32,11 @@ export const users: User[] = [
     Password: '$2a$10$HLQQdXE5POxTARPOa5BkZ.4NiZ./YheecV.1J9pc98SbSsvZETnnm', // demo123
     FirstName: 'Sarah',
     LastName: 'Johnson',
-    Role: 'Worker',
+    Role: 'Cleaner',
     Phone: '+1 (555) 123-4567',
     IsActive: true,
     CreatedAt: '2024-01-15T08:00:00Z',
-    AssignedBackupContactIds: ['user-006'],
+    AssignedBackupContactIds: ['user-006', 'user-007'],
   },
   {
     Id: 'user-002',
@@ -44,11 +44,11 @@ export const users: User[] = [
     Password: '$2a$10$HLQQdXE5POxTARPOa5BkZ.4NiZ./YheecV.1J9pc98SbSsvZETnnm', // demo123
     FirstName: 'Mike',
     LastName: 'Chen',
-    Role: 'Worker',
+    Role: 'Cleaner',
     Phone: '+1 (555) 234-5678',
     IsActive: true,
     CreatedAt: '2024-02-01T09:00:00Z',
-    AssignedBackupContactIds: ['user-006'],
+    AssignedBackupContactIds: ['user-006', 'user-008'],
   },
   {
     Id: 'user-003',
@@ -56,11 +56,11 @@ export const users: User[] = [
     Password: '$2a$10$HLQQdXE5POxTARPOa5BkZ.4NiZ./YheecV.1J9pc98SbSsvZETnnm', // demo123
     FirstName: 'Emma',
     LastName: 'Wilson',
-    Role: 'Worker',
+    Role: 'Booker',
     Phone: '+1 (555) 345-6789',
     IsActive: true,
     CreatedAt: '2024-02-10T10:00:00Z',
-    AssignedBackupContactIds: ['user-007'],
+    AssignedBackupContactIds: ['user-007', 'user-006'],
   },
   {
     Id: 'user-004',
@@ -68,11 +68,11 @@ export const users: User[] = [
     Password: '$2a$10$HLQQdXE5POxTARPOa5BkZ.4NiZ./YheecV.1J9pc98SbSsvZETnnm', // demo123
     FirstName: 'James',
     LastName: 'Brown',
-    Role: 'Worker',
+    Role: 'Booker',
     Phone: '+1 (555) 456-7890',
     IsActive: true,
     CreatedAt: '2024-03-01T08:30:00Z',
-    AssignedBackupContactIds: ['user-007'],
+    AssignedBackupContactIds: ['user-007', 'user-008'],
   },
   {
     Id: 'user-005',
@@ -80,11 +80,11 @@ export const users: User[] = [
     Password: '$2a$10$HLQQdXE5POxTARPOa5BkZ.4NiZ./YheecV.1J9pc98SbSsvZETnnm', // demo123
     FirstName: 'Lisa',
     LastName: 'Martinez',
-    Role: 'Worker',
+    Role: 'Director',
     Phone: '+1 (555) 567-8901',
     IsActive: false,
     CreatedAt: '2024-01-20T11:00:00Z',
-    AssignedBackupContactIds: ['user-006'],
+    AssignedBackupContactIds: ['user-006', 'user-007'],
   },
   {
     Id: 'user-006',
@@ -116,7 +116,7 @@ export const users: User[] = [
     Password: '$2a$10$HLQQdXE5POxTARPOa5BkZ.4NiZ./YheecV.1J9pc98SbSsvZETnnm', // demo123
     FirstName: 'Robert',
     LastName: 'Anderson',
-    Role: 'Manager',
+    Role: 'Director',
     Phone: '+1 (555) 890-1234',
     IsActive: true,
     CreatedAt: '2024-01-05T08:00:00Z',
@@ -128,7 +128,7 @@ export const users: User[] = [
     Password: '$2a$10$HLQQdXE5POxTARPOa5BkZ.4NiZ./YheecV.1J9pc98SbSsvZETnnm', // demo123
     FirstName: 'Maria',
     LastName: 'Rodriguez',
-    Role: 'Manager',
+    Role: 'Director',
     Phone: '+1 (555) 901-2345',
     IsActive: true,
     CreatedAt: '2024-01-08T10:00:00Z',

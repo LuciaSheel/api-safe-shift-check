@@ -14,7 +14,7 @@ import {
 
 export class ReportsRepository {
   async getDashboardMetrics(): Promise<DashboardMetrics> {
-    const totalWorkers = dataStore.users.filter(u => u.Role === 'Worker').length;
+    const totalWorkers = dataStore.users.filter(u => ['Cleaner', 'Booker', 'Director', 'BackupContact'].includes(u.Role)).length;
     const activeWorkers = dataStore.shifts.filter(s => s.Status === 'Active').length;
     
     const today = new Date();
@@ -142,7 +142,7 @@ export class ReportsRepository {
 
   // Generate compliance records from actual check-in data
   async generateComplianceRecords(filter?: ReportFilter): Promise<ComplianceRecord[]> {
-    const workers = dataStore.users.filter(u => u.Role === 'Worker' && u.IsActive);
+    const workers = dataStore.users.filter(u => ['Cleaner', 'Booker', 'Director', 'BackupContact'].includes(u.Role) && u.IsActive);
     
     return workers
       .filter(w => !filter?.WorkerId || w.Id === filter.WorkerId)

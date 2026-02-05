@@ -33,13 +33,10 @@ export class ShiftService {
     // Validate worker exists and is active
     const worker = await userRepository.findById(data.WorkerId);
     if (!worker) {
-      throw new Error('Worker not found');
+      throw new Error('User not found');
     }
     if (!worker.IsActive) {
-      throw new Error('Worker is not active');
-    }
-    if (worker.Role !== 'Worker') {
-      throw new Error('User is not a worker');
+      throw new Error('User is not active');
     }
 
     // Validate location exists and is active
