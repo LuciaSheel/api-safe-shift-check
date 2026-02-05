@@ -115,6 +115,26 @@ export class ReportsController {
     }
   }
 
+  async getShiftReports(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const filter: ReportFilter = {
+        StartDate: req.query.StartDate as string | undefined,
+        EndDate: req.query.EndDate as string | undefined,
+        WorkerId: req.query.WorkerId as string | undefined,
+        LocationId: req.query.LocationId as string | undefined,
+      };
+
+      const data = await reportsService.getShiftReports(filter);
+
+      res.json({
+        Success: true,
+        Data: data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getReportsSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const filter: ReportFilter = {

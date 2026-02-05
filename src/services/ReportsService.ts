@@ -42,6 +42,28 @@ export class ReportsService {
     return reportsRepository.getActiveWorkersData();
   }
 
+  async getShiftReports(filter?: ReportFilter): Promise<{
+    Items: Array<{
+      ShiftId: string;
+      WorkerName: string;
+      WorkerId: string;
+      LocationName: string;
+      LocationId: string;
+      StartTime: string;
+      EndTime: string | null;
+      Duration: number;
+      Status: string;
+      TotalCheckIns: number;
+      MissedCheckIns: number;
+      OnTimeCheckIns: number;
+      LateCheckIns: number;
+      Alerts: number;
+    }>;
+    Total: number;
+  }> {
+    return reportsRepository.getShiftReports(filter);
+  }
+
   async generateTimeTrackingReport(filter?: ReportFilter): Promise<TimeTrackingRecord[]> {
     return reportsRepository.generateTimeTrackingRecords(filter);
   }

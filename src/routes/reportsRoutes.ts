@@ -21,6 +21,18 @@ router.use(authenticate);
 router.get('/dashboard', reportsController.getDashboardMetrics.bind(reportsController));
 
 /**
+ * @route   GET /api/reports/shifts
+ * @desc    Get shift reports
+ * @access  Private (Manager, Admin)
+ */
+router.get(
+  '/shifts',
+  requireManagerOrAdmin,
+  validate(paginationValidation),
+  reportsController.getShiftReports.bind(reportsController)
+);
+
+/**
  * @route   GET /api/reports/time-tracking
  * @desc    Get time tracking records
  * @access  Private (Manager, Admin)

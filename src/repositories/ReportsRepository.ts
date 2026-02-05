@@ -174,6 +174,85 @@ export class ReportsRepository {
         };
       });
   }
+
+  async getShiftReports(filter?: ReportFilter): Promise<{
+    Items: Array<{
+      ShiftId: string;
+      WorkerName: string;
+      WorkerId: string;
+      LocationName: string;
+      LocationId: string;
+      StartTime: string;
+      EndTime: string | null;
+      Duration: number;
+      Status: string;
+      TotalCheckIns: number;
+      MissedCheckIns: number;
+      OnTimeCheckIns: number;
+      LateCheckIns: number;
+      Alerts: number;
+    }>;
+    Total: number;
+  }> {
+    let shifts = [...dataStore.shifts];
+
+    // Apply filters
+    if (filter) {
+      if (filter.WorkerId) {
+        shifts = shifts.filter(s => s.WorkerId === filter.WorkerId);
+      }
+      if (filter.LocationId) {
+        shifts = shifts.filter(s => s.LocationId === filter.LocationId);
+      }
+      if (filter.StartDate) {
+        shifts = shifts.filter(s => s.StartTime >= filter.StartDate!);
+      }
+      if (filter.EndDate) {
+        shifts = shifts.filter(s => s.StartTime <= filter.EndDate!);
+      }
+    }
+
+    // Sort by start time descending (most recent first)
+    shifts.sort((a, b) => new Date(b.StartTime).getTime() - new Date(a.StartTime).getTime());
+
+    const items = shifts.map(shift => {
+      const worker = dataStore.users.find(u => u.Id === shift.WorkerId);
+      const location = dataStore.locations.find(l => l.Id === shift.LocationId);
+      const shiftCheckIns = dataStore.checkIns.filter(c => c.ShiftId === shift.Id);
+      const shiftAlerts = dataStore.alerts.filter(a => a.ShiftId === shift.Id);
+
+      const missedCheckIns = shiftCheckIns.filter(c => c.Status === 'Missed').length;
+      const onTimeCheckIns = shiftCheckIns.filter(c => c.Status === 'Confirmed' && (c.ResponseSeconds || 0) <= 60).length;
+      const lateCheckIns = shiftCheckIns.filter(c => c.Status === 'Confirmed' && (c.ResponseSeconds || 0) > 60).length;
+
+      // Calculate duration in minutes
+      const startTime = new Date(shift.StartTime);
+      const endTime = shift.EndTime ? new Date(shift.EndTime) : new Date();
+      const duration = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
+
+      return {
+        ShiftId: shift.Id,
+        WorkerName: worker ? `${worker.FirstName} ${worker.LastName}` : 'Unknown',
+        WorkerId: shift.WorkerId,
+        LocationName: location?.Name || 'Unknown',
+        LocationId: shift.LocationId,
+        StartTime: shift.StartTime,
+        EndTime: shift.EndTime || null,
+        Duration: duration,
+        Status: shift.Status as string,
+        TotalCheckIns: shiftCheckIns.length,
+        MissedCheckIns: missedCheckIns,
+        OnTimeCheckIns: onTimeCheckIns,
+        LateCheckIns: lateCheckIns,
+        Alerts: shiftAlerts.length,
+      };
+    });
+
+    return {
+      Items: items,
+      Total: items.length,
+    };
+  }
 }
 
 // Export singleton instance
