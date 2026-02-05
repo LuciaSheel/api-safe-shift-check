@@ -22,12 +22,9 @@ const router = Router();
  */
 router.post('/login', validate(loginValidation), authController.login.bind(authController));
 
-/**
- * @route   POST /api/auth/register
- * @desc    Register a new user
- * @access  Public
- */
-router.post('/register', validate(registerValidation), authController.register.bind(authController));
+// NOTE: Self-registration is disabled. Users are created by admins via POST /api/users
+// If you need to re-enable public registration, uncomment the route below:
+// router.post('/register', validate(registerValidation), authController.register.bind(authController));
 
 /**
  * @route   POST /api/auth/refresh-token
