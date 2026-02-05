@@ -177,6 +177,7 @@ export class AuthService {
       UserId: user.Id,
       Email: user.Email,
       Role: user.Role,
+      TokenVersion: user.TokenVersion || 1,
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -218,6 +219,13 @@ export class AuthService {
    */
   async getUserById(userId: string): Promise<User | null> {
     return userRepository.findById(userId);
+  }
+
+  /**
+   * Logout user - invalidates all tokens by incrementing TokenVersion
+   */
+  async logout(userId: string): Promise<boolean> {
+    return await userRepository.incrementTokenVersion(userId);
   }
 }
 

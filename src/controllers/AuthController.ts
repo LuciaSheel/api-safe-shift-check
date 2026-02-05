@@ -161,6 +161,30 @@ export class AuthController {
       next(error);
     }
   }
+
+  async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const jwtUser = (req as Request & { user?: { UserId: string } }).user;
+
+      if (!jwtUser) {
+        res.status(401).json({
+          Success: false,
+          Message: 'Unauthorized',
+        });
+        return;
+      }
+
+      // Increment token version to invalidate all tokens for this user
+      await authService.logout(jwtUser.UserId);
+
+      res.json({
+        Success: true,
+        Message: 'Logged out successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 // Export singleton instance

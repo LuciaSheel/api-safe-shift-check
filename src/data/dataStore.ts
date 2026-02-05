@@ -37,6 +37,7 @@ export const users: User[] = [
     IsActive: true,
     CreatedAt: '2024-01-15T08:00:00Z',
     AssignedBackupContactIds: ['user-006', 'user-007'],
+    TokenVersion: 1,
   },
   {
     Id: 'user-002',
@@ -49,6 +50,7 @@ export const users: User[] = [
     IsActive: true,
     CreatedAt: '2024-02-01T09:00:00Z',
     AssignedBackupContactIds: ['user-006', 'user-008'],
+    TokenVersion: 1,
   },
   {
     Id: 'user-003',
@@ -61,6 +63,7 @@ export const users: User[] = [
     IsActive: true,
     CreatedAt: '2024-02-10T10:00:00Z',
     AssignedBackupContactIds: ['user-007', 'user-006'],
+    TokenVersion: 1,
   },
   {
     Id: 'user-004',
@@ -73,6 +76,7 @@ export const users: User[] = [
     IsActive: true,
     CreatedAt: '2024-03-01T08:30:00Z',
     AssignedBackupContactIds: ['user-007', 'user-008'],
+    TokenVersion: 1,
   },
   {
     Id: 'user-005',
@@ -85,6 +89,7 @@ export const users: User[] = [
     IsActive: false,
     CreatedAt: '2024-01-20T11:00:00Z',
     AssignedBackupContactIds: ['user-006', 'user-007'],
+    TokenVersion: 1,
   },
   {
     Id: 'user-006',
@@ -97,6 +102,7 @@ export const users: User[] = [
     IsActive: true,
     CreatedAt: '2024-01-10T08:00:00Z',
     AssignedWorkerIds: ['user-001', 'user-002', 'user-005'],
+    TokenVersion: 1,
   },
   {
     Id: 'user-007',
@@ -109,6 +115,7 @@ export const users: User[] = [
     IsActive: true,
     CreatedAt: '2024-01-12T09:00:00Z',
     AssignedWorkerIds: ['user-003', 'user-004'],
+    TokenVersion: 1,
   },
   {
     Id: 'user-008',
@@ -121,6 +128,7 @@ export const users: User[] = [
     IsActive: true,
     CreatedAt: '2024-01-05T08:00:00Z',
     TeamId: 'team-001',
+    TokenVersion: 1,
   },
   {
     Id: 'user-009',
@@ -133,6 +141,7 @@ export const users: User[] = [
     IsActive: true,
     CreatedAt: '2024-01-08T10:00:00Z',
     TeamId: 'team-002',
+    TokenVersion: 1,
   },
   {
     Id: 'user-010',
@@ -144,6 +153,7 @@ export const users: User[] = [
     Phone: '+1 (555) 000-0000',
     IsActive: true,
     CreatedAt: '2024-01-01T00:00:00Z',
+    TokenVersion: 1,
   },
 ];
 

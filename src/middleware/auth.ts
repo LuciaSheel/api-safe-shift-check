@@ -6,6 +6,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { TokenPayload, UserRole } from '../types';
+import { userRepository } from '../repositories';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 
@@ -20,8 +21,9 @@ declare global {
 
 /**
  * Verify JWT token and attach user to request
+ * Also validates that the token version matches the user's current version
  */
-export function authenticate(req: Request, res: Response, next: NextFunction): void {
+export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
@@ -36,6 +38,28 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
+    
+    // Verify token version matches current user's version
+    const user = await userRepository.findById(decoded.UserId);
+    if (!user) {
+      res.status(401).json({
+        Success: false,
+        Message: 'User not found',
+      });
+      return;
+    }
+
+    const currentTokenVersion = user.TokenVersion || 1;
+    const tokenVersion = decoded.TokenVersion || 1;
+    
+    if (tokenVersion !== currentTokenVersion) {
+      res.status(401).json({
+        Success: false,
+        Message: 'Token has been invalidated. Please log in again.',
+      });
+      return;
+    }
+
     req.user = decoded;
     next();
   } catch (error) {

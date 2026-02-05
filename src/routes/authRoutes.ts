@@ -59,4 +59,11 @@ router.post('/reset-password', authController.resetPassword.bind(authController)
  */
 router.get('/me', authenticate, authController.me.bind(authController));
 
+/**
+ * @route   POST /api/auth/logout
+ * @desc    Logout user and invalidate all tokens
+ * @access  Private
+ */
+router.post('/logout', authenticate, authController.logout.bind(authController));
+
 export default router;

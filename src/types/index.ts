@@ -40,6 +40,7 @@ export interface User {
   AssignedBackupContactIds?: string[];
   AssignedWorkerIds?: string[];
   TeamId?: string;
+  TokenVersion?: number; // Incremented on logout/password change to invalidate tokens
 }
 
 export interface Location {
@@ -195,6 +196,7 @@ export interface TokenPayload {
   UserId: string;
   Email: string;
   Role: UserRole;
+  TokenVersion: number;
   iat: number;
   exp: number;
 }

@@ -118,6 +118,17 @@ export class UserRepository implements IBaseRepository<User, CreateUserDto, Upda
 
     dataStore.users[index].Password = hashedPassword;
     dataStore.users[index].UpdatedAt = new Date().toISOString();
+    // Increment token version to invalidate existing sessions
+    dataStore.users[index].TokenVersion = (dataStore.users[index].TokenVersion || 1) + 1;
+    return true;
+  }
+
+  async incrementTokenVersion(id: string): Promise<boolean> {
+    const index = dataStore.users.findIndex(u => u.Id === id);
+    if (index === -1) return false;
+
+    dataStore.users[index].TokenVersion = (dataStore.users[index].TokenVersion || 1) + 1;
+    dataStore.users[index].UpdatedAt = new Date().toISOString();
     return true;
   }
 
