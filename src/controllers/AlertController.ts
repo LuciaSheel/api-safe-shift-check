@@ -197,6 +197,28 @@ export class AlertController {
     }
   }
 
+  async getAlertsForMyWorkers(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user?.UserId;
+      if (!userId) {
+        res.status(401).json({
+          Success: false,
+          Message: 'Not authenticated',
+        });
+        return;
+      }
+
+      const alerts = await alertService.getAlertsForBackupContact(userId);
+
+      res.json({
+        Success: true,
+        Data: alerts,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getByWorkerId(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { workerId } = req.params;

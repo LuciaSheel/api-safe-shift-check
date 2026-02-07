@@ -277,6 +277,28 @@ export class UserController {
     }
   }
 
+  async getMyAssignedWorkers(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user?.UserId;
+      if (!userId) {
+        res.status(401).json({
+          Success: false,
+          Message: 'Not authenticated',
+        });
+        return;
+      }
+
+      const workers = await userService.getWorkersByBackupContactId(userId);
+
+      res.json({
+        Success: true,
+        Data: workers,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getWorkersByBackupContactId(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { backupContactId } = req.params;

@@ -38,6 +38,13 @@ router.get(
 router.get('/active', alertController.getActive.bind(alertController));
 
 /**
+ * @route   GET /api/alerts/my-workers
+ * @desc    Get alerts for workers assigned to the current backup contact
+ * @access  Private
+ */
+router.get('/my-workers', alertController.getAlertsForMyWorkers.bind(alertController));
+
+/**
  * @route   GET /api/alerts/count
  * @desc    Get count of pending alerts
  * @access  Private

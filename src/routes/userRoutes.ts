@@ -50,6 +50,16 @@ router.get(
 );
 
 /**
+ * @route   GET /api/users/my-assigned-workers
+ * @desc    Get workers assigned to the current backup contact
+ * @access  Private
+ */
+router.get(
+  '/my-assigned-workers',
+  userController.getMyAssignedWorkers.bind(userController)
+);
+
+/**
  * @route   GET /api/users/:id
  * @desc    Get user by ID
  * @access  Private

@@ -407,7 +407,7 @@ export const notifications: Notification[] = [
   },
   {
     Id: 'notif-002',
-    UserId: 'user-006',
+    UserId: 'user-007',
     Type: 'Alert',
     Title: 'Worker Alert',
     Message: 'James Brown has missed a check-in at Eastside Youth Center',

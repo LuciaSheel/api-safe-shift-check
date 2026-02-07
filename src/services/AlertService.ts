@@ -162,6 +162,20 @@ export class AlertService {
     return alertRepository.findByBackupContactId(backupContactId);
   }
 
+  async getAlertsForBackupContact(backupContactId: string): Promise<Alert[]> {
+    // Get workers assigned to this backup contact
+    const workers = await userRepository.findWorkersByBackupContactId(backupContactId);
+    const workerIds = workers.map(w => w.Id);
+    
+    if (workerIds.length === 0) {
+      return [];
+    }
+
+    // Get all alerts and filter by worker IDs
+    const allAlerts = await alertRepository.findAll({} as any);
+    return allAlerts.Data.filter(alert => workerIds.includes(alert.WorkerId));
+  }
+
   async countPendingAlerts(): Promise<number> {
     return alertRepository.countPendingAlerts();
   }
