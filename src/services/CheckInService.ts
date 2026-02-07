@@ -11,6 +11,7 @@ import {
   userRepository,
   systemSettingsRepository
 } from '../repositories';
+import { smsService } from './SmsService';
 import {
   CheckIn,
   CreateCheckInDto,
@@ -163,7 +164,9 @@ export class CheckInService {
     const worker = await userRepository.findById(checkIn.WorkerId);
     if (!worker) return;
 
-    // Get backup contact
+    const workerName = `${worker.FirstName} ${worker.LastName}`;
+
+    // Get primary backup contact for alert record
     const backupContactId = worker.AssignedBackupContactIds?.[0];
 
     // Create alert
@@ -173,7 +176,7 @@ export class CheckInService {
       BackupContactId: backupContactId,
       Type: 'MissedCheckIn',
       Severity: 'High',
-      Message: `${worker.FirstName} ${worker.LastName} missed a check-in`,
+      Message: `${workerName} missed a check-in`,
     });
 
     // Create notification for worker
@@ -184,15 +187,30 @@ export class CheckInService {
       Message: 'You missed a scheduled check-in. Please respond immediately.',
     });
 
-    // Create notification for backup contact if assigned
-    if (backupContactId) {
-      await notificationRepository.create({
-        UserId: backupContactId,
-        Type: 'Alert',
-        Title: 'Worker Alert',
-        Message: `${worker.FirstName} ${worker.LastName} has missed a check-in`,
-        ActionUrl: '/backup',
-      });
+    // Create notification and SMS for ALL assigned backup contacts
+    if (worker.AssignedBackupContactIds?.length) {
+      // Fetch all backup contact details
+      const backupContacts = await Promise.all(
+        worker.AssignedBackupContactIds.map(id => userRepository.findById(id))
+      );
+
+      // In-app notifications
+      const notificationPromises = worker.AssignedBackupContactIds.map(bcId =>
+        notificationRepository.create({
+          UserId: bcId,
+          Type: 'Alert',
+          Title: 'Worker Alert',
+          Message: `${workerName} has missed a check-in`,
+          ActionUrl: '/backup',
+        })
+      );
+      await Promise.all(notificationPromises);
+
+      // SMS notifications
+      const smsPromises = backupContacts
+        .filter((bc): bc is NonNullable<typeof bc> => bc !== null && !!bc.Phone)
+        .map(bc => smsService.sendMissedCheckInAlert(bc.Phone, workerName));
+      await Promise.all(smsPromises);
     }
   }
 }

@@ -8,6 +8,7 @@ import {
   userRepository, 
   notificationRepository 
 } from '../repositories';
+import { smsService } from './SmsService';
 import {
   Alert,
   CreateAlertDto,
@@ -75,13 +76,35 @@ export class AlertService {
     const updatedAlert = await alertRepository.acknowledgeAlert(id, acknowledgedBy);
 
     if (updatedAlert) {
-      // Create notification for acknowledgment
+      const worker = await userRepository.findById(alert.WorkerId);
+      const acknowledger = await userRepository.findById(acknowledgedBy);
+      const acknowledgerName = acknowledger 
+        ? `${acknowledger.FirstName} ${acknowledger.LastName}` 
+        : 'a backup contact';
+      
+      // Create notification for worker
       await notificationRepository.create({
         UserId: alert.WorkerId,
         Type: 'Alert',
         Title: 'Alert Acknowledged',
-        Message: 'Your alert has been acknowledged by your backup contact',
+        Message: `Your alert has been acknowledged by ${acknowledgerName}`,
       });
+
+      // Notify all other backup contacts that someone responded
+      if (worker?.AssignedBackupContactIds?.length) {
+        const otherBackupContacts = worker.AssignedBackupContactIds.filter(
+          id => id !== acknowledgedBy
+        );
+        const notificationPromises = otherBackupContacts.map(backupContactId =>
+          notificationRepository.create({
+            UserId: backupContactId,
+            Type: 'Alert',
+            Title: 'Alert Acknowledged',
+            Message: `Alert for ${worker.FirstName} ${worker.LastName} was acknowledged by ${acknowledgerName}`,
+          })
+        );
+        await Promise.all(notificationPromises);
+      }
     }
 
     return updatedAlert;
@@ -100,7 +123,9 @@ export class AlertService {
     const updatedAlert = await alertRepository.resolveAlert(id, resolvedBy);
 
     if (updatedAlert) {
-      // Create notification for resolution
+      const worker = await userRepository.findById(alert.WorkerId);
+      
+      // Create notification for resolution to worker
       await notificationRepository.create({
         UserId: alert.WorkerId,
         Type: 'Alert',
@@ -108,14 +133,17 @@ export class AlertService {
         Message: 'Your alert has been resolved',
       });
 
-      // Notify backup contact if assigned
-      if (alert.BackupContactId) {
-        await notificationRepository.create({
-          UserId: alert.BackupContactId,
-          Type: 'Alert',
-          Title: 'Alert Resolved',
-          Message: 'The worker alert has been resolved',
-        });
+      // Notify all assigned backup contacts
+      if (worker?.AssignedBackupContactIds?.length) {
+        const notificationPromises = worker.AssignedBackupContactIds.map(backupContactId =>
+          notificationRepository.create({
+            UserId: backupContactId,
+            Type: 'Alert',
+            Title: 'Alert Resolved',
+            Message: `Alert for ${worker.FirstName} ${worker.LastName} has been resolved`,
+          })
+        );
+        await Promise.all(notificationPromises);
       }
     }
 
@@ -193,7 +221,10 @@ export class AlertService {
   }
 
   private async createAlertNotifications(alert: Alert): Promise<void> {
-    // Notify worker
+    const worker = await userRepository.findById(alert.WorkerId);
+    const workerName = worker ? `${worker.FirstName} ${worker.LastName}` : 'Unknown Worker';
+    
+    // Notify worker (in-app)
     await notificationRepository.create({
       UserId: alert.WorkerId,
       Type: 'Alert',
@@ -201,16 +232,37 @@ export class AlertService {
       Message: alert.Message,
     });
 
-    // Notify backup contact if assigned
-    if (alert.BackupContactId) {
-      const worker = await userRepository.findById(alert.WorkerId);
-      await notificationRepository.create({
-        UserId: alert.BackupContactId,
-        Type: 'Alert',
-        Title: 'Worker Alert',
-        Message: `${worker?.FirstName} ${worker?.LastName}: ${alert.Message}`,
-        ActionUrl: '/backup',
-      });
+    // Notify ALL assigned backup contacts (in-app + SMS)
+    if (worker?.AssignedBackupContactIds?.length) {
+      // Fetch all backup contact details for SMS
+      const backupContacts = await Promise.all(
+        worker.AssignedBackupContactIds.map(id => userRepository.findById(id))
+      );
+
+      // In-app notifications
+      const notificationPromises = worker.AssignedBackupContactIds.map(backupContactId =>
+        notificationRepository.create({
+          UserId: backupContactId,
+          Type: 'Alert',
+          Title: 'Worker Alert',
+          Message: `${workerName}: ${alert.Message}`,
+          ActionUrl: '/backup',
+        })
+      );
+      await Promise.all(notificationPromises);
+
+      // SMS notifications based on alert type
+      const smsPromises = backupContacts
+        .filter((bc): bc is NonNullable<typeof bc> => bc !== null && !!bc.Phone)
+        .map(bc => {
+          if (alert.Type === 'Emergency') {
+            return smsService.sendEmergencyAlert(bc.Phone, workerName, alert.Message);
+          } else if (alert.Type === 'MissedCheckIn') {
+            return smsService.sendMissedCheckInAlert(bc.Phone, workerName);
+          }
+          return Promise.resolve({ success: true });
+        });
+      await Promise.all(smsPromises);
     }
   }
 
