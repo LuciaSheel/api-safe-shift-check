@@ -187,6 +187,20 @@ export class CheckInController {
     }
   }
 
+  async confirmForShift(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { shiftId } = req.body;
+      const checkIn = await checkInService.confirmCheckInForShift(shiftId);
+
+      res.status(201).json({
+        Success: true,
+        Data: checkIn,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getByShiftId(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { shiftId } = req.params;

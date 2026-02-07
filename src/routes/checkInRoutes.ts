@@ -67,6 +67,13 @@ router.post(
 router.post('/schedule', checkInController.scheduleCheckIn.bind(checkInController));
 
 /**
+ * @route   POST /api/check-ins/confirm-for-shift
+ * @desc    Create and confirm check-in for a shift (I'm OK button)
+ * @access  Private
+ */
+router.post('/confirm-for-shift', checkInController.confirmForShift.bind(checkInController));
+
+/**
  * @route   DELETE /api/check-ins/:id
  * @desc    Delete check-in
  * @access  Private (Manager, Admin)

@@ -118,6 +118,33 @@ export class CheckInService {
     });
   }
 
+  /**
+   * Create and immediately confirm a check-in for a shift
+   * Used when worker clicks "I'm OK" button
+   */
+  async confirmCheckInForShift(shiftId: string): Promise<CheckIn> {
+    const shift = await shiftRepository.findById(shiftId);
+    if (!shift) {
+      throw new Error('Shift not found');
+    }
+
+    if (shift.Status !== 'Active') {
+      throw new Error('Shift is not active');
+    }
+
+    const now = new Date();
+
+    // Create check-in with current time as scheduled time
+    const checkIn = await checkInRepository.create({
+      ShiftId: shiftId,
+      WorkerId: shift.WorkerId,
+      ScheduledTime: now.toISOString(),
+    });
+
+    // Immediately confirm it with 0 response seconds (instant confirmation)
+    return checkInRepository.confirmCheckIn(checkIn.Id, 0);
+  }
+
   async getCheckInsByShiftId(shiftId: string): Promise<CheckIn[]> {
     return checkInRepository.findByShiftId(shiftId);
   }
