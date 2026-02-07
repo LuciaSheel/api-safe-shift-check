@@ -80,7 +80,14 @@ export class UserService {
   }
 
   async getBackupContacts(filter?: UserFilter): Promise<PaginatedResponse<User>> {
-    return userRepository.findAll({ ...filter, Role: 'BackupContact' });
+    // Any active user with AssignedWorkerIds can be a backup contact
+    const allUsers = await userRepository.findAll({ ...filter, IsActive: true });
+    const backupContacts = allUsers.Data.filter(u => u.AssignedWorkerIds && u.AssignedWorkerIds.length > 0);
+    return {
+      ...allUsers,
+      Data: backupContacts,
+      Total: backupContacts.length,
+    };
   }
 
   async getManagers(filter?: UserFilter): Promise<PaginatedResponse<User>> {

@@ -95,7 +95,7 @@ export class NotificationService {
     notification: Omit<CreateNotificationDto, 'UserId'>
   ): Promise<Notification[]> {
     const usersResponse = await userRepository.findAll({ 
-      Role: role as 'Cleaner' | 'Booker' | 'Director' | 'BackupContact' | 'Administrator',
+      Role: role as 'Cleaner' | 'Booker' | 'Director' | 'Administrator',
       IsActive: true,
       PageSize: 1000 
     });

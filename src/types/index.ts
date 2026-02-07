@@ -7,7 +7,7 @@
 // ENUMS
 // ============================================
 
-export type UserRole = 'Cleaner' | 'Booker' | 'Director' | 'BackupContact' | 'Administrator';
+export type UserRole = 'Cleaner' | 'Booker' | 'Director' | 'Administrator';
 
 export type ShiftStatus = 'Active' | 'Completed' | 'Cancelled';
 

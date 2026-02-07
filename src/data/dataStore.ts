@@ -98,7 +98,7 @@ export const users: User[] = [
     Password: '$2a$10$HLQQdXE5POxTARPOa5BkZ.4NiZ./YheecV.1J9pc98SbSsvZETnnm', // demo123
     FirstName: 'David',
     LastName: 'Taylor',
-    Role: 'BackupContact',
+    Role: 'Director',
     Phone: '+1 (555) 678-9012',
     IsActive: true,
     CreatedAt: '2024-01-10T08:00:00Z',
@@ -111,7 +111,7 @@ export const users: User[] = [
     Password: '$2a$10$HLQQdXE5POxTARPOa5BkZ.4NiZ./YheecV.1J9pc98SbSsvZETnnm', // demo123
     FirstName: 'Jennifer',
     LastName: 'Garcia',
-    Role: 'BackupContact',
+    Role: 'Director',
     Phone: '+1 (555) 789-0123',
     IsActive: true,
     CreatedAt: '2024-01-12T09:00:00Z',
