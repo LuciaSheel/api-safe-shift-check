@@ -417,7 +417,7 @@ export const notifications: Notification[] = [
   },
   {
     Id: 'notif-004',
-    UserId: 'user-008',
+    UserId: 'user-010',
     Type: 'System',
     Title: 'Weekly Report Ready',
     Message: 'The weekly compliance report is now available',
