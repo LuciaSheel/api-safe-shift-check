@@ -397,15 +397,6 @@ export const alerts: Alert[] = [
 
 export const notifications: Notification[] = [
   {
-    Id: 'notif-001',
-    UserId: 'user-001',
-    Type: 'CheckIn',
-    Title: 'Check-in Reminder',
-    Message: 'Your next check-in is due in 5 minutes',
-    IsRead: false,
-    CreatedAt: new Date(now.getTime() - 5 * 60 * 1000).toISOString(),
-  },
-  {
     Id: 'notif-002',
     UserId: 'user-007',
     Type: 'Alert',
