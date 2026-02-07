@@ -131,4 +131,16 @@ router.post(
   userController.assignBackupContact.bind(userController)
 );
 
+/**
+ * @route   DELETE /api/users/:id/backup-contact/:backupContactId
+ * @desc    Remove backup contact from worker
+ * @access  Private (Manager, Admin)
+ */
+router.delete(
+  '/:id/backup-contact/:backupContactId',
+  requireManagerOrAdmin,
+  validate(idParamValidation),
+  userController.removeBackupContact.bind(userController)
+);
+
 export default router;

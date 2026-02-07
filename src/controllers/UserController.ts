@@ -249,7 +249,8 @@ export class UserController {
 
   async removeBackupContact(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { workerId, backupContactId } = req.params;
+      const workerId = req.params.id;
+      const { backupContactId } = req.params;
       const user = await userService.removeBackupContact(workerId, backupContactId);
 
       res.json({
