@@ -93,6 +93,9 @@ export interface Alert {
   AcknowledgedBy?: string;
   ResolvedAt?: string;
   ResolvedBy?: string;
+  // Escalation tracking
+  EscalatedToIndex: number; // Index of backup contact notified (0 = first, 1 = second, etc.)
+  LastEscalatedAt?: string; // When the last escalation notification was sent
 }
 
 export interface Notification {
@@ -324,6 +327,8 @@ export interface UpdateAlertDto {
   AcknowledgedBy?: string;
   ResolvedAt?: string;
   ResolvedBy?: string;
+  EscalatedToIndex?: number;
+  LastEscalatedAt?: string;
 }
 
 export interface CreateNotificationDto {

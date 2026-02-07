@@ -11,6 +11,7 @@ import dotenv from 'dotenv';
 
 import { setupRoutes } from './routes';
 import { notFoundHandler, errorHandler } from './middleware';
+import { escalationService } from './services';
 
 // Load environment variables
 dotenv.config();
@@ -101,11 +102,15 @@ const server = app.listen(PORT, () => {
   console.log('║    - GET  /api/reports/dashboard           ║');
   console.log('║                                            ║');
   console.log('╚════════════════════════════════════════════╝');
+
+  // Start background services
+  escalationService.start();
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('\n⚠️  SIGTERM received. Shutting down gracefully...');
+  escalationService.stop();
   server.close(() => {
     console.log('✅ Server closed.');
     process.exit(0);
@@ -114,6 +119,7 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   console.log('\n⚠️  SIGINT received. Shutting down gracefully...');
+  escalationService.stop();
   server.close(() => {
     console.log('✅ Server closed.');
     process.exit(0);

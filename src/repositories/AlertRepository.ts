@@ -86,6 +86,7 @@ export class AlertRepository implements IBaseRepository<Alert, CreateAlertDto, U
   }
 
   async create(data: CreateAlertDto): Promise<Alert> {
+    const createdAt = new Date().toISOString();
     const newAlert: Alert = {
       Id: `alert-${uuidv4()}`,
       ShiftId: data.ShiftId,
@@ -95,7 +96,9 @@ export class AlertRepository implements IBaseRepository<Alert, CreateAlertDto, U
       Severity: data.Severity,
       Message: data.Message,
       Status: 'Active',
-      CreatedAt: new Date().toISOString(),
+      CreatedAt: createdAt,
+      EscalatedToIndex: 0, // Start with first backup contact
+      LastEscalatedAt: createdAt, // Track when escalation started
     };
     dataStore.alerts.push(newAlert);
     return newAlert;

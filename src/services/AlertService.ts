@@ -246,38 +246,51 @@ export class AlertService {
       Message: alert.Message,
     });
 
-    // Notify ALL assigned backup contacts (in-app + SMS)
-    if (worker?.AssignedBackupContactIds?.length) {
-      // Fetch all backup contact details for SMS
-      const backupContacts = await Promise.all(
-        worker.AssignedBackupContactIds.map(id => userRepository.findById(id))
-      );
+    // Notify ONLY the first backup contact - escalation will notify others if needed
+    await this.notifyBackupContactAtIndex(alert, worker, workerName, alert.EscalatedToIndex);
+  }
 
-      // In-app notifications
-      const notificationPromises = worker.AssignedBackupContactIds.map(backupContactId =>
-        notificationRepository.create({
-          UserId: backupContactId,
-          Type: 'Alert',
-          Title: 'Worker Alert',
-          Message: `${workerName}: ${alert.Message}`,
-          ActionUrl: '/backup',
-        })
-      );
-      await Promise.all(notificationPromises);
-
-      // SMS notifications based on alert type
-      const smsPromises = backupContacts
-        .filter((bc): bc is NonNullable<typeof bc> => bc !== null && !!bc.Phone)
-        .map(bc => {
-          if (alert.Type === 'Emergency') {
-            return smsService.sendEmergencyAlert(bc.Phone, workerName, alert.Message);
-          } else if (alert.Type === 'MissedCheckIn') {
-            return smsService.sendMissedCheckInAlert(bc.Phone, workerName);
-          }
-          return Promise.resolve({ success: true });
-        });
-      await Promise.all(smsPromises);
+  /**
+   * Notify a specific backup contact by index
+   * Used for initial notification and escalations
+   */
+  async notifyBackupContactAtIndex(
+    alert: Alert, 
+    worker: Awaited<ReturnType<typeof userRepository.findById>>,
+    workerName: string,
+    index: number
+  ): Promise<boolean> {
+    if (!worker?.AssignedBackupContactIds?.length || index >= worker.AssignedBackupContactIds.length) {
+      return false; // No more backup contacts to notify
     }
+
+    const backupContactId = worker.AssignedBackupContactIds[index];
+    const backupContact = await userRepository.findById(backupContactId);
+
+    if (!backupContact) {
+      return false;
+    }
+
+    // In-app notification
+    await notificationRepository.create({
+      UserId: backupContactId,
+      Type: 'Alert',
+      Title: 'Worker Alert',
+      Message: `${workerName}: ${alert.Message}`,
+      ActionUrl: '/backup',
+    });
+
+    // SMS notification based on alert type
+    if (backupContact.Phone) {
+      if (alert.Type === 'Emergency') {
+        await smsService.sendEmergencyAlert(backupContact.Phone, workerName, alert.Message);
+      } else if (alert.Type === 'MissedCheckIn') {
+        await smsService.sendMissedCheckInAlert(backupContact.Phone, workerName);
+      }
+    }
+
+    console.log(`[Escalation] Notified backup contact ${index + 1}/${worker.AssignedBackupContactIds.length}: ${backupContact.FirstName} ${backupContact.LastName}`);
+    return true;
   }
 
   private getAlertTitle(type: Alert['Type']): string {

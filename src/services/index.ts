@@ -15,3 +15,4 @@ export * from './SystemSettingsService';
 export * from './ReportsService';
 export * from './EmailService';
 export * from './SmsService';
+export * from './EscalationService';
