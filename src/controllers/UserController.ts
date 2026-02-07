@@ -235,8 +235,9 @@ export class UserController {
 
   async assignBackupContact(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { workerId, backupContactId } = req.params;
-      const user = await userService.assignBackupContact(workerId, backupContactId);
+      const workerId = req.params.id;
+      const { BackupContactId } = req.body;
+      const user = await userService.assignBackupContact(workerId, BackupContactId);
 
       res.json({
         Success: true,
