@@ -145,6 +145,40 @@ export class CheckInService {
     return checkInRepository.confirmCheckIn(checkIn.Id, 0);
   }
 
+  /**
+   * Create and mark a check-in as missed for a shift
+   * Used when timer runs out without worker response
+   */
+  async markCheckInAsMissedForShift(shiftId: string): Promise<CheckIn> {
+    const shift = await shiftRepository.findById(shiftId);
+    if (!shift) {
+      throw new Error('Shift not found');
+    }
+
+    if (shift.Status !== 'Active') {
+      throw new Error('Shift is not active');
+    }
+
+    const now = new Date();
+
+    // Create check-in with current time as scheduled time
+    const checkIn = await checkInRepository.create({
+      ShiftId: shiftId,
+      WorkerId: shift.WorkerId,
+      ScheduledTime: now.toISOString(),
+    });
+
+    // Mark it as missed
+    const missedCheckIn = await checkInRepository.markAsMissed(checkIn.Id);
+
+    if (missedCheckIn) {
+      // Create alert for missed check-in
+      await this.createMissedCheckInAlert(missedCheckIn);
+    }
+
+    return missedCheckIn!;
+  }
+
   async getCheckInsByShiftId(shiftId: string): Promise<CheckIn[]> {
     return checkInRepository.findByShiftId(shiftId);
   }

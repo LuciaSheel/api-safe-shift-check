@@ -74,6 +74,13 @@ router.post('/schedule', checkInController.scheduleCheckIn.bind(checkInControlle
 router.post('/confirm-for-shift', checkInController.confirmForShift.bind(checkInController));
 
 /**
+ * @route   POST /api/check-ins/missed-for-shift
+ * @desc    Create and mark check-in as missed for a shift (timer ran out)
+ * @access  Private
+ */
+router.post('/missed-for-shift', checkInController.markMissedForShift.bind(checkInController));
+
+/**
  * @route   DELETE /api/check-ins/:id
  * @desc    Delete check-in
  * @access  Private (Manager, Admin)

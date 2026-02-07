@@ -201,6 +201,20 @@ export class CheckInController {
     }
   }
 
+  async markMissedForShift(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { shiftId } = req.body;
+      const checkIn = await checkInService.markCheckInAsMissedForShift(shiftId);
+
+      res.status(201).json({
+        Success: true,
+        Data: checkIn,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getByShiftId(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { shiftId } = req.params;
