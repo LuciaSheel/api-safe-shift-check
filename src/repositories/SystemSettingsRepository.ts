@@ -31,6 +31,8 @@ export class SystemSettingsRepository {
       EnableSmsNotifications: true,
       EnableEmailNotifications: true,
       EnablePushNotifications: true,
+      EmergencyNumber: '911',
+      NonEmergencyNumber: '250-766-2288',
       UpdatedAt: new Date().toISOString(),
     };
 

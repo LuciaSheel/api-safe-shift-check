@@ -460,6 +460,8 @@ export const systemSettings: SystemSettings = {
   EnableSmsNotifications: true,
   EnableEmailNotifications: true,
   EnablePushNotifications: true,
+  EmergencyNumber: '911',
+  NonEmergencyNumber: '250-766-2288',
   UpdatedAt: '2024-01-01T00:00:00Z',
 };
 

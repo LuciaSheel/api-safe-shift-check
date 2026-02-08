@@ -126,6 +126,8 @@ export interface SystemSettings {
   EnableSmsNotifications: boolean;
   EnableEmailNotifications: boolean;
   EnablePushNotifications: boolean;
+  EmergencyNumber: string;
+  NonEmergencyNumber: string;
   UpdatedAt?: string;
   UpdatedBy?: string;
 }
@@ -363,6 +365,8 @@ export interface UpdateSystemSettingsDto {
   EnableSmsNotifications?: boolean;
   EnableEmailNotifications?: boolean;
   EnablePushNotifications?: boolean;
+  EmergencyNumber?: string;
+  NonEmergencyNumber?: string;
 }
 
 // ============================================
