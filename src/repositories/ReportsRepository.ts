@@ -191,6 +191,7 @@ export class ReportsRepository {
       OnTimeCheckIns: number;
       LateCheckIns: number;
       Alerts: number;
+      Notes?: string;
     }>;
     Total: number;
   }> {
@@ -245,6 +246,7 @@ export class ReportsRepository {
         OnTimeCheckIns: onTimeCheckIns,
         LateCheckIns: lateCheckIns,
         Alerts: shiftAlerts.length,
+        Notes: shift.Notes,
       };
     });
 
