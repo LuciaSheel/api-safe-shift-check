@@ -184,7 +184,13 @@ export class AlertService {
     return alertRepository.count(filter);
   }
 
-  async createEmergencyAlert(workerId: string, shiftId: string, message?: string): Promise<Alert> {
+  async createEmergencyAlert(
+    workerId: string, 
+    shiftId: string, 
+    message?: string,
+    latitude?: number,
+    longitude?: number
+  ): Promise<Alert> {
     const worker = await userRepository.findById(workerId);
     if (!worker) {
       throw new Error('Worker not found');
@@ -199,6 +205,8 @@ export class AlertService {
       Type: 'Emergency',
       Severity: 'Critical',
       Message: message || `Emergency alert from ${worker.FirstName} ${worker.LastName}`,
+      Latitude: latitude,
+      Longitude: longitude,
     });
   }
 

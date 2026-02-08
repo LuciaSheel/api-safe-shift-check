@@ -271,8 +271,8 @@ export class AlertController {
 
   async createEmergency(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { WorkerId, ShiftId, Message } = req.body;
-      const alert = await alertService.createEmergencyAlert(WorkerId, ShiftId, Message);
+      const { WorkerId, ShiftId, Message, Latitude, Longitude } = req.body;
+      const alert = await alertService.createEmergencyAlert(WorkerId, ShiftId, Message, Latitude, Longitude);
 
       res.status(201).json({
         Success: true,

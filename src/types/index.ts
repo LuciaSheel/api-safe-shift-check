@@ -96,6 +96,9 @@ export interface Alert {
   // Escalation tracking
   EscalatedToIndex: number; // Index of backup contact notified (0 = first, 1 = second, etc.)
   LastEscalatedAt?: string; // When the last escalation notification was sent
+  // Location at time of alert (for emergencies)
+  Latitude?: number;
+  Longitude?: number;
 }
 
 export interface Notification {
@@ -322,6 +325,8 @@ export interface CreateAlertDto {
   Type: AlertType;
   Severity: AlertSeverity;
   Message: string;
+  Latitude?: number;
+  Longitude?: number;
 }
 
 export interface UpdateAlertDto {

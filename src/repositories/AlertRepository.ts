@@ -99,6 +99,8 @@ export class AlertRepository implements IBaseRepository<Alert, CreateAlertDto, U
       CreatedAt: createdAt,
       EscalatedToIndex: 0, // Start with first backup contact
       LastEscalatedAt: createdAt, // Track when escalation started
+      Latitude: data.Latitude,
+      Longitude: data.Longitude,
     };
     dataStore.alerts.push(newAlert);
     return newAlert;
