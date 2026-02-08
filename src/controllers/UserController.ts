@@ -88,17 +88,18 @@ export class UserController {
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
-      const updateData: UpdateUserDto = {
-        Email: req.body.Email,
-        FirstName: req.body.FirstName,
-        LastName: req.body.LastName,
-        Phone: req.body.Phone,
-        Avatar: req.body.Avatar,
-        IsActive: req.body.IsActive,
-        TeamId: req.body.TeamId,
-        AssignedBackupContactIds: req.body.AssignedBackupContactIds,
-        AssignedWorkerIds: req.body.AssignedWorkerIds,
-      };
+      // Only include fields that are explicitly provided (not undefined)
+      const updateData: UpdateUserDto = {};
+      if (req.body.Email !== undefined) updateData.Email = req.body.Email;
+      if (req.body.FirstName !== undefined) updateData.FirstName = req.body.FirstName;
+      if (req.body.LastName !== undefined) updateData.LastName = req.body.LastName;
+      if (req.body.Phone !== undefined) updateData.Phone = req.body.Phone;
+      if (req.body.Avatar !== undefined) updateData.Avatar = req.body.Avatar;
+      if (req.body.IsActive !== undefined) updateData.IsActive = req.body.IsActive;
+      if (req.body.TeamId !== undefined) updateData.TeamId = req.body.TeamId;
+      if (req.body.AssignedBackupContactIds !== undefined) updateData.AssignedBackupContactIds = req.body.AssignedBackupContactIds;
+      if (req.body.AssignedWorkerIds !== undefined) updateData.AssignedWorkerIds = req.body.AssignedWorkerIds;
+      if (req.body.Role !== undefined) updateData.Role = req.body.Role;
 
       const user = await userService.update(id, updateData);
 

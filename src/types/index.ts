@@ -263,6 +263,7 @@ export interface UpdateUserDto {
   LastName?: string;
   Phone?: string;
   Avatar?: string;
+  Role?: UserRole;
   IsActive?: boolean;
   TeamId?: string;
   AssignedBackupContactIds?: string[];
