@@ -117,7 +117,7 @@ export class SmsService {
         this.provider = new ConsoleSmsProvider();
     }
 
-    this.appName = process.env.APP_NAME || 'Safe Shift Check';
+    this.appName = process.env.APP_NAME || 'Safe on Shift';
   }
 
   /**

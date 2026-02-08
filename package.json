@@ -1,7 +1,7 @@
 {
   "name": "api-safe-shift-check",
   "version": "1.0.0",
-  "description": "API server for Safe Shift Check worker safety application",
+  "description": "API server for Safe on Shift worker safety application",
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",

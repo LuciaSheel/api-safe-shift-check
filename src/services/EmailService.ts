@@ -78,8 +78,8 @@ export class EmailService {
         this.provider = new ConsoleEmailProvider();
     }
 
-    this.fromAddress = process.env.EMAIL_FROM || 'noreply@safeshiftcheck.com';
-    this.appName = process.env.APP_NAME || 'Safe Shift Check';
+    this.fromAddress = process.env.EMAIL_FROM || 'noreply@safeonshift.com';
+    this.appName = process.env.APP_NAME || 'Safe on Shift';
     this.appUrl = process.env.APP_URL || 'http://localhost:8080';
   }
 

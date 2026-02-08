@@ -1,5 +1,5 @@
 /**
- * Safe Shift Check API Server
+ * Safe on Shift (SOS) API Server
  * Main entry point for the Express.js application
  */
 
@@ -79,7 +79,7 @@ app.use(errorHandler);
 const server = app.listen(PORT, () => {
   console.log('╔════════════════════════════════════════════╗');
   console.log('║                                            ║');
-  console.log('║     Safe Shift Check API Server           ║');
+  console.log('║     Safe on Shift (SOS) API Server        ║');
   console.log('║                                            ║');
   console.log('╠════════════════════════════════════════════╣');
   console.log(`║  Environment: ${NODE_ENV.padEnd(28)}║`);

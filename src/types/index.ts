@@ -1,5 +1,5 @@
 /**
- * Core types for the Safe Shift Check API
+ * Core types for the Safe on Shift API
  * All types use PascalCase for field names to match frontend conventions
  */
 

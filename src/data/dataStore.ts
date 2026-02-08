@@ -146,7 +146,7 @@ export const users: User[] = [
   },
   {
     Id: 'user-010',
-    Email: 'admin@safealone.com',
+    Email: 'admin@safeonshift.com',
     Password: '$2a$10$oiZB.MnuLKL19oKPR5226On3HvPSrevepS1cgS3Tqowg2u94xcOgS', // admin123
     FirstName: 'System',
     LastName: 'Administrator',

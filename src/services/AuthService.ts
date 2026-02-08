@@ -44,7 +44,7 @@ const DEMO_CREDENTIALS: Record<string, string> = {
   'sarah.johnson@example.com': 'demo123',
   'david.taylor@example.com': 'demo123',
   'robert.anderson@example.com': 'demo123',
-  'admin@safealone.com': 'admin123',
+  'admin@safeonshift.com': 'admin123',
 };
 
 export class AuthService {

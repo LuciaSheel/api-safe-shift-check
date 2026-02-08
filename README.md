@@ -1,6 +1,6 @@
-# Safe Shift Check API
+# Safe on Shift (SOS) API
 
-A comprehensive REST API server for the Safe Shift Check worker safety application. Built with Node.js, Express.js, and TypeScript.
+A comprehensive REST API server for the Safe on Shift worker safety application. Built with Node.js, Express.js, and TypeScript.
 
 ## Features
 
@@ -182,7 +182,7 @@ Authorization: Bearer <your-jwt-token>
 | Worker | sarah.johnson@example.com | demo123 |
 | BackupContact | david.taylor@example.com | demo123 |
 | Manager | robert.anderson@example.com | demo123 |
-| Administrator | admin@safealone.com | admin123 |
+| Administrator | admin@safeonshift.com | admin123 |
 
 ## Example Usage
 
