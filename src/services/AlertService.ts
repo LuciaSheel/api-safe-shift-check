@@ -271,13 +271,25 @@ export class AlertService {
       return false;
     }
 
-    // In-app notification
+    const backupContactName = `${backupContact.FirstName} ${backupContact.LastName}`;
+
+    // In-app notification for backup contact with clear worker name
     await notificationRepository.create({
       UserId: backupContactId,
       Type: 'Alert',
-      Title: 'Worker Alert',
-      Message: `${workerName}: ${alert.Message}`,
+      Title: alert.Type === 'MissedCheckIn' ? 'Missed Check-In' : 'Emergency Alert',
+      Message: alert.Type === 'MissedCheckIn' 
+        ? `${workerName} has missed a check-in. Please try to contact them immediately.`
+        : `${workerName} triggered an emergency alert: ${alert.Message}`,
       ActionUrl: '/backup',
+    });
+
+    // Notify the worker that their backup contact has been alerted
+    await notificationRepository.create({
+      UserId: alert.WorkerId,
+      Type: 'Alert',
+      Title: 'Backup Contact Notified',
+      Message: `${backupContactName} has been alerted and will try to reach you.`,
     });
 
     // SMS notification based on alert type
@@ -289,7 +301,7 @@ export class AlertService {
       }
     }
 
-    console.log(`[Escalation] Notified backup contact ${index + 1}/${worker.AssignedBackupContactIds.length}: ${backupContact.FirstName} ${backupContact.LastName}`);
+    console.log(`[Escalation] Notified backup contact ${index + 1}/${worker.AssignedBackupContactIds.length}: ${backupContactName}`);
     return true;
   }
 
