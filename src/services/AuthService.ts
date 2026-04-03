@@ -8,7 +8,7 @@ import bcrypt from 'bcryptjs';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { userRepository } from '../repositories';
-import { dataStore } from '../data/dataStore';
+import { prisma } from '../lib/prisma';
 import { emailService } from './EmailService';
 import { 
   User, 
@@ -16,7 +16,6 @@ import {
   AuthResponse, 
   TokenPayload,
   CreateUserDto,
-  PasswordResetToken,
 } from '../types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
@@ -39,13 +38,7 @@ function parseExpiresIn(value: string): number {
 
 const JWT_EXPIRES_SECONDS = parseExpiresIn(JWT_EXPIRES_IN);
 
-// Demo credentials - these bypass password verification for development
-const DEMO_CREDENTIALS: Record<string, string> = {
-  'sarah.johnson@example.com': 'demo123',
-  'david.taylor@example.com': 'demo123',
-  'robert.anderson@example.com': 'demo123',
-  'admin@safeonshift.com': 'admin123',
-};
+
 
 export class AuthService {
   
@@ -60,12 +53,9 @@ export class AuthService {
       throw new Error('Account is inactive');
     }
 
-    // Check demo credentials first (for development)
-    const isDemoValid = DEMO_CREDENTIALS[credentials.Email.toLowerCase()] === credentials.Password;
-    
-    // Then check against hashed password if not demo
-    let isPasswordValid = isDemoValid;
-    if (!isPasswordValid && user.Password) {
+    // Verify password against stored hash
+    let isPasswordValid = false;
+    if (user.Password) {
       isPasswordValid = await bcrypt.compare(credentials.Password, user.Password);
     }
 
@@ -146,23 +136,20 @@ export class AuthService {
     expiresAt.setHours(expiresAt.getHours() + 1);
 
     // Invalidate any existing reset tokens for this user
-    const existingIndex = dataStore.passwordResetTokens.findIndex(
-      t => t.UserId === user.Id && !t.UsedAt
-    );
-    if (existingIndex !== -1) {
-      dataStore.passwordResetTokens.splice(existingIndex, 1);
-    }
+    await prisma.passwordResetToken.deleteMany({
+      where: { UserId: user.Id, UsedAt: null },
+    });
 
     // Store the new reset token
-    const resetToken: PasswordResetToken = {
-      Id: uuidv4(),
-      UserId: user.Id,
-      Token: token,
-      Email: email,
-      ExpiresAt: expiresAt.toISOString(),
-      CreatedAt: new Date().toISOString(),
-    };
-    dataStore.passwordResetTokens.push(resetToken);
+    await prisma.passwordResetToken.create({
+      data: {
+        Id: uuidv4(),
+        UserId: user.Id,
+        Token: token,
+        Email: email,
+        ExpiresAt: expiresAt,
+      },
+    });
 
     // Send the password reset email
     const emailResult = await emailService.sendPasswordResetEmail(email, token);
@@ -179,18 +166,12 @@ export class AuthService {
    * Verify a password reset token is valid
    */
   async verifyResetToken(token: string): Promise<{ valid: boolean; email?: string }> {
-    const resetToken = dataStore.passwordResetTokens.find(
-      t => t.Token === token && !t.UsedAt
-    );
+    const resetToken = await prisma.passwordResetToken.findFirst({
+      where: { Token: token, UsedAt: null },
+    });
 
-    if (!resetToken) {
-      return { valid: false };
-    }
-
-    // Check if token has expired
-    if (new Date(resetToken.ExpiresAt) < new Date()) {
-      return { valid: false };
-    }
+    if (!resetToken) return { valid: false };
+    if (resetToken.ExpiresAt < new Date()) return { valid: false };
 
     return { valid: true, email: resetToken.Email };
   }
@@ -199,35 +180,23 @@ export class AuthService {
    * Complete password reset with token and new password
    */
   async completePasswordReset(token: string, newPassword: string): Promise<boolean> {
-    const resetToken = dataStore.passwordResetTokens.find(
-      t => t.Token === token && !t.UsedAt
-    );
+    const resetToken = await prisma.passwordResetToken.findFirst({
+      where: { Token: token, UsedAt: null },
+    });
 
-    if (!resetToken) {
-      throw new Error('Invalid or expired reset token');
-    }
+    if (!resetToken) throw new Error('Invalid or expired reset token');
+    if (resetToken.ExpiresAt < new Date()) throw new Error('Reset token has expired');
 
-    // Check if token has expired
-    if (new Date(resetToken.ExpiresAt) < new Date()) {
-      throw new Error('Reset token has expired');
-    }
-
-    // Hash the new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    // Update the password (this also increments TokenVersion)
     const updated = await userRepository.updatePassword(resetToken.UserId, hashedPassword);
-    
-    if (!updated) {
-      throw new Error('Failed to update password');
-    }
+    if (!updated) throw new Error('Failed to update password');
 
-    // Mark the token as used
-    resetToken.UsedAt = new Date().toISOString();
+    await prisma.passwordResetToken.update({
+      where: { Id: resetToken.Id },
+      data: { UsedAt: new Date() },
+    });
 
-    // Send confirmation email
     await emailService.sendPasswordChangedEmail(resetToken.Email);
-
     return true;
   }
 

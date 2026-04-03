@@ -1,10 +1,9 @@
 /**
- * Location Repository
- * Handles all data access operations for Location entities
+ * Location Repository (Prisma)
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { dataStore } from '../data/dataStore';
+import { prisma } from '../lib/prisma';
 import {
   Location,
   CreateLocationDto,
@@ -13,120 +12,117 @@ import {
   PaginatedResponse,
 } from '../types';
 import { IBaseRepository } from './interfaces';
+import type { Location as PrismaLocation } from '@prisma/client';
 
 export interface LocationFilter extends PaginatedRequest {
   IsActive?: boolean;
   Search?: string;
 }
 
+function mapLocation(row: PrismaLocation): Location {
+  return {
+    Id: row.Id,
+    Name: row.Name,
+    Address: row.Address,
+    Latitude: row.Latitude,
+    Longitude: row.Longitude,
+    IsActive: row.IsActive,
+    CreatedAt: row.CreatedAt.toISOString(),
+    UpdatedAt: row.UpdatedAt?.toISOString(),
+  };
+}
+
 export class LocationRepository implements IBaseRepository<Location, CreateLocationDto, UpdateLocationDto, LocationFilter> {
-  
+
   async findAll(filter?: LocationFilter): Promise<PaginatedResponse<Location>> {
-    let filteredLocations = [...dataStore.locations];
-
-    // Apply filters
-    if (filter) {
-      if (filter.IsActive !== undefined) {
-        filteredLocations = filteredLocations.filter(l => l.IsActive === filter.IsActive);
-      }
-      if (filter.Search) {
-        const search = filter.Search.toLowerCase();
-        filteredLocations = filteredLocations.filter(
-          l =>
-            l.Name.toLowerCase().includes(search) ||
-            l.Address.toLowerCase().includes(search)
-        );
-      }
-
-      // Apply sorting
-      if (filter.SortBy) {
-        const sortOrder = filter.SortOrder === 'desc' ? -1 : 1;
-        filteredLocations.sort((a, b) => {
-          const aVal = (a as unknown as Record<string, unknown>)[filter.SortBy!];
-          const bVal = (b as unknown as Record<string, unknown>)[filter.SortBy!];
-          if (typeof aVal === 'string' && typeof bVal === 'string') {
-            return aVal.localeCompare(bVal) * sortOrder;
-          }
-          return 0;
-        });
-      }
+    const where: Record<string, unknown> = {};
+    if (filter?.IsActive !== undefined) where.IsActive = filter.IsActive;
+    if (filter?.Search) {
+      where.OR = [
+        { Name: { contains: filter.Search, mode: 'insensitive' } },
+        { Address: { contains: filter.Search, mode: 'insensitive' } },
+      ];
     }
 
-    // Apply pagination
-    const page = filter?.Page || 1;
-    const pageSize = filter?.PageSize || 10;
-    const total = filteredLocations.length;
-    const totalPages = Math.ceil(total / pageSize);
-    const startIndex = (page - 1) * pageSize;
-    const paginatedLocations = filteredLocations.slice(startIndex, startIndex + pageSize);
+    const page = filter?.Page ?? 1;
+    const pageSize = filter?.PageSize ?? 10;
+    const skip = (page - 1) * pageSize;
+    const orderBy = filter?.SortBy
+      ? { [filter.SortBy]: (filter.SortOrder ?? 'asc') as 'asc' | 'desc' }
+      : { Name: 'asc' as const };
+
+    const [total, rows] = await Promise.all([
+      prisma.location.count({ where }),
+      prisma.location.findMany({ where, skip, take: pageSize, orderBy }),
+    ]);
 
     return {
-      Data: paginatedLocations,
+      Data: rows.map(mapLocation),
       Total: total,
       Page: page,
       PageSize: pageSize,
-      TotalPages: totalPages,
+      TotalPages: Math.ceil(total / pageSize),
     };
   }
 
   async findById(id: string): Promise<Location | null> {
-    return dataStore.locations.find(l => l.Id === id) || null;
+    const row = await prisma.location.findUnique({ where: { Id: id } });
+    return row ? mapLocation(row) : null;
   }
 
   async create(data: CreateLocationDto): Promise<Location> {
-    const newLocation: Location = {
-      Id: `loc-${uuidv4()}`,
-      ...data,
-      IsActive: true,
-      CreatedAt: new Date().toISOString(),
-    };
-    dataStore.locations.push(newLocation);
-    return newLocation;
+    const row = await prisma.location.create({
+      data: {
+        Id: `loc-${uuidv4()}`,
+        Name: data.Name,
+        Address: data.Address,
+        Latitude: data.Latitude,
+        Longitude: data.Longitude,
+        IsActive: true,
+      },
+    });
+    return mapLocation(row);
   }
 
   async update(id: string, data: UpdateLocationDto): Promise<Location | null> {
-    const index = dataStore.locations.findIndex(l => l.Id === id);
-    if (index === -1) return null;
-
-    dataStore.locations[index] = {
-      ...dataStore.locations[index],
-      ...data,
-      UpdatedAt: new Date().toISOString(),
-    };
-
-    return dataStore.locations[index];
+    try {
+      const row = await prisma.location.update({
+        where: { Id: id },
+        data: { ...data, UpdatedAt: new Date() },
+      });
+      return mapLocation(row);
+    } catch {
+      return null;
+    }
   }
 
   async delete(id: string): Promise<boolean> {
-    const index = dataStore.locations.findIndex(l => l.Id === id);
-    if (index === -1) return false;
-
-    dataStore.locations.splice(index, 1);
-    return true;
+    try {
+      await prisma.location.delete({ where: { Id: id } });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async exists(id: string): Promise<boolean> {
-    return dataStore.locations.some(l => l.Id === id);
+    const count = await prisma.location.count({ where: { Id: id } });
+    return count > 0;
   }
 
   async count(filter?: LocationFilter): Promise<number> {
-    let count = dataStore.locations.length;
-
-    if (filter) {
-      let filteredLocations = [...dataStore.locations];
-      if (filter.IsActive !== undefined) {
-        filteredLocations = filteredLocations.filter(l => l.IsActive === filter.IsActive);
-      }
-      count = filteredLocations.length;
-    }
-
-    return count;
+    const where: Record<string, unknown> = {};
+    if (filter?.IsActive !== undefined) where.IsActive = filter.IsActive;
+    return prisma.location.count({ where });
   }
 
   async findActiveLocations(): Promise<Location[]> {
-    return dataStore.locations.filter(l => l.IsActive);
+    const rows = await prisma.location.findMany({
+      where: { IsActive: true },
+      orderBy: { Name: 'asc' },
+    });
+    return rows.map(mapLocation);
   }
 }
 
-// Export singleton instance
 export const locationRepository = new LocationRepository();

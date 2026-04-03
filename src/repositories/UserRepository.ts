@@ -1,196 +1,202 @@
 /**
- * User Repository
- * Handles all data access operations for User entities
+ * User Repository (Prisma)
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { dataStore } from '../data/dataStore';
+import { prisma } from '../lib/prisma';
 import {
   User,
   CreateUserDto,
   UpdateUserDto,
   UserFilter,
   PaginatedResponse,
+  UserRole,
 } from '../types';
 import { IBaseRepository } from './interfaces';
+import type { User as PrismaUser } from '@prisma/client';
+
+function mapUser(row: PrismaUser, includePassword = false): User {
+  const user: User = {
+    Id: row.Id,
+    Email: row.Email,
+    FirstName: row.FirstName,
+    LastName: row.LastName,
+    Role: row.Role as UserRole,
+    Phone: row.Phone,
+    Avatar: row.Avatar ?? undefined,
+    IsActive: row.IsActive,
+    CreatedAt: row.CreatedAt.toISOString(),
+    UpdatedAt: row.UpdatedAt?.toISOString(),
+    AssignedBackupContactIds: row.AssignedBackupContactIds,
+    AssignedWorkerIds: row.AssignedWorkerIds,
+    TeamId: row.TeamId ?? undefined,
+    TokenVersion: row.TokenVersion,
+  };
+  if (includePassword && row.Password) {
+    user.Password = row.Password;
+  }
+  return user;
+}
 
 export class UserRepository implements IBaseRepository<User, CreateUserDto, UpdateUserDto, UserFilter> {
-  
+
   async findAll(filter?: UserFilter): Promise<PaginatedResponse<User>> {
-    let filteredUsers = [...dataStore.users];
-
-    // Apply filters
-    if (filter) {
-      if (filter.Role) {
-        filteredUsers = filteredUsers.filter(u => u.Role === filter.Role);
-      }
-      if (filter.IsActive !== undefined) {
-        filteredUsers = filteredUsers.filter(u => u.IsActive === filter.IsActive);
-      }
-      if (filter.TeamId) {
-        filteredUsers = filteredUsers.filter(u => u.TeamId === filter.TeamId);
-      }
-      if (filter.Search) {
-        const search = filter.Search.toLowerCase();
-        filteredUsers = filteredUsers.filter(
-          u =>
-            u.FirstName.toLowerCase().includes(search) ||
-            u.LastName.toLowerCase().includes(search) ||
-            u.Email.toLowerCase().includes(search)
-        );
-      }
-
-      // Apply sorting
-      if (filter.SortBy) {
-        const sortOrder = filter.SortOrder === 'desc' ? -1 : 1;
-        filteredUsers.sort((a, b) => {
-          const aVal = (a as unknown as Record<string, unknown>)[filter.SortBy!];
-          const bVal = (b as unknown as Record<string, unknown>)[filter.SortBy!];
-          if (typeof aVal === 'string' && typeof bVal === 'string') {
-            return aVal.localeCompare(bVal) * sortOrder;
-          }
-          return 0;
-        });
-      }
+    const where: Record<string, unknown> = {};
+    if (filter?.Role) where.Role = filter.Role;
+    if (filter?.IsActive !== undefined) where.IsActive = filter.IsActive;
+    if (filter?.TeamId) where.TeamId = filter.TeamId;
+    if (filter?.Search) {
+      where.OR = [
+        { FirstName: { contains: filter.Search, mode: 'insensitive' } },
+        { LastName: { contains: filter.Search, mode: 'insensitive' } },
+        { Email: { contains: filter.Search, mode: 'insensitive' } },
+      ];
     }
 
-    // Apply pagination
-    const page = filter?.Page || 1;
-    const pageSize = filter?.PageSize || 10;
-    const total = filteredUsers.length;
-    const totalPages = Math.ceil(total / pageSize);
-    const startIndex = (page - 1) * pageSize;
-    const paginatedUsers = filteredUsers.slice(startIndex, startIndex + pageSize);
+    const page = filter?.Page ?? 1;
+    const pageSize = filter?.PageSize ?? 10;
+    const skip = (page - 1) * pageSize;
+    const orderBy = filter?.SortBy
+      ? { [filter.SortBy]: (filter.SortOrder ?? 'asc') as 'asc' | 'desc' }
+      : { CreatedAt: 'desc' as const };
 
-    // Remove passwords from response
-    const sanitizedUsers = paginatedUsers.map(u => this.sanitizeUser(u));
+    const [total, rows] = await Promise.all([
+      prisma.user.count({ where }),
+      prisma.user.findMany({ where, skip, take: pageSize, orderBy }),
+    ]);
 
     return {
-      Data: sanitizedUsers,
+      Data: rows.map(r => mapUser(r)),
       Total: total,
       Page: page,
       PageSize: pageSize,
-      TotalPages: totalPages,
+      TotalPages: Math.ceil(total / pageSize),
     };
   }
 
   async findById(id: string): Promise<User | null> {
-    const user = dataStore.users.find(u => u.Id === id);
-    return user ? this.sanitizeUser(user) : null;
+    const row = await prisma.user.findUnique({ where: { Id: id } });
+    return row ? mapUser(row) : null;
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    const user = dataStore.users.find(u => u.Email.toLowerCase() === email.toLowerCase());
-    return user || null;
+    const row = await prisma.user.findFirst({
+      where: { Email: { equals: email, mode: 'insensitive' } },
+    });
+    return row ? mapUser(row) : null;
   }
 
   async findByEmailWithPassword(email: string): Promise<User | null> {
-    return dataStore.users.find(u => u.Email.toLowerCase() === email.toLowerCase()) || null;
+    const row = await prisma.user.findFirst({
+      where: { Email: { equals: email, mode: 'insensitive' } },
+    });
+    return row ? mapUser(row, true) : null;
   }
 
   async create(data: CreateUserDto): Promise<User> {
-    const newUser: User = {
-      Id: `user-${uuidv4()}`,
-      ...data,
-      IsActive: true,
-      CreatedAt: new Date().toISOString(),
-    };
-    dataStore.users.push(newUser);
-    return this.sanitizeUser(newUser);
+    const row = await prisma.user.create({
+      data: {
+        Id: `user-${uuidv4()}`,
+        Email: data.Email,
+        Password: data.Password,
+        FirstName: data.FirstName,
+        LastName: data.LastName,
+        Role: data.Role,
+        Phone: data.Phone,
+        Avatar: data.Avatar,
+        TeamId: data.TeamId,
+        AssignedBackupContactIds: data.AssignedBackupContactIds ?? [],
+        AssignedWorkerIds: data.AssignedWorkerIds ?? [],
+        IsActive: true,
+      },
+    });
+    return mapUser(row);
   }
 
   async update(id: string, data: UpdateUserDto): Promise<User | null> {
-    const index = dataStore.users.findIndex(u => u.Id === id);
-    if (index === -1) return null;
-
-    dataStore.users[index] = {
-      ...dataStore.users[index],
-      ...data,
-      UpdatedAt: new Date().toISOString(),
-    };
-
-    return this.sanitizeUser(dataStore.users[index]);
+    try {
+      const row = await prisma.user.update({
+        where: { Id: id },
+        data: { ...data, UpdatedAt: new Date() },
+      });
+      return mapUser(row);
+    } catch {
+      return null;
+    }
   }
 
   async updatePassword(id: string, hashedPassword: string): Promise<boolean> {
-    const index = dataStore.users.findIndex(u => u.Id === id);
-    if (index === -1) return false;
-
-    dataStore.users[index].Password = hashedPassword;
-    dataStore.users[index].UpdatedAt = new Date().toISOString();
-    // Increment token version to invalidate existing sessions
-    dataStore.users[index].TokenVersion = (dataStore.users[index].TokenVersion || 1) + 1;
-    return true;
+    try {
+      await prisma.user.update({
+        where: { Id: id },
+        data: {
+          Password: hashedPassword,
+          UpdatedAt: new Date(),
+          TokenVersion: { increment: 1 },
+        },
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async incrementTokenVersion(id: string): Promise<boolean> {
-    const index = dataStore.users.findIndex(u => u.Id === id);
-    if (index === -1) return false;
-
-    dataStore.users[index].TokenVersion = (dataStore.users[index].TokenVersion || 1) + 1;
-    dataStore.users[index].UpdatedAt = new Date().toISOString();
-    return true;
+    try {
+      await prisma.user.update({
+        where: { Id: id },
+        data: { TokenVersion: { increment: 1 }, UpdatedAt: new Date() },
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async delete(id: string): Promise<boolean> {
-    const index = dataStore.users.findIndex(u => u.Id === id);
-    if (index === -1) return false;
-
-    dataStore.users.splice(index, 1);
-    return true;
+    try {
+      await prisma.user.delete({ where: { Id: id } });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async exists(id: string): Promise<boolean> {
-    return dataStore.users.some(u => u.Id === id);
+    const count = await prisma.user.count({ where: { Id: id } });
+    return count > 0;
   }
 
   async emailExists(email: string, excludeId?: string): Promise<boolean> {
-    return dataStore.users.some(
-      u => u.Email.toLowerCase() === email.toLowerCase() && u.Id !== excludeId
-    );
+    const count = await prisma.user.count({
+      where: {
+        Email: { equals: email, mode: 'insensitive' },
+        ...(excludeId ? { NOT: { Id: excludeId } } : {}),
+      },
+    });
+    return count > 0;
   }
 
   async count(filter?: UserFilter): Promise<number> {
-    let count = dataStore.users.length;
-
-    if (filter) {
-      let filteredUsers = [...dataStore.users];
-      if (filter.Role) {
-        filteredUsers = filteredUsers.filter(u => u.Role === filter.Role);
-      }
-      if (filter.IsActive !== undefined) {
-        filteredUsers = filteredUsers.filter(u => u.IsActive === filter.IsActive);
-      }
-      count = filteredUsers.length;
-    }
-
-    return count;
+    const where: Record<string, unknown> = {};
+    if (filter?.Role) where.Role = filter.Role;
+    if (filter?.IsActive !== undefined) where.IsActive = filter.IsActive;
+    return prisma.user.count({ where });
   }
 
   async findWorkersByBackupContactId(backupContactId: string): Promise<User[]> {
-    const backupContact = dataStore.users.find(u => u.Id === backupContactId);
-    if (!backupContact || !backupContact.AssignedWorkerIds) return [];
-
-    return dataStore.users
-      .filter(u => backupContact.AssignedWorkerIds?.includes(u.Id))
-      .map(u => this.sanitizeUser(u));
+    const rows = await prisma.user.findMany({
+      where: { AssignedBackupContactIds: { has: backupContactId } },
+    });
+    return rows.map(r => mapUser(r));
   }
 
   async findBackupContactsByWorkerId(workerId: string): Promise<User[]> {
-    const worker = dataStore.users.find(u => u.Id === workerId);
-    if (!worker || !worker.AssignedBackupContactIds) return [];
-
-    return dataStore.users
-      .filter(u => worker.AssignedBackupContactIds?.includes(u.Id))
-      .map(u => this.sanitizeUser(u));
-  }
-
-  private sanitizeUser(user: User): User {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { Password, ...sanitized } = user;
-    return sanitized as User;
+    const rows = await prisma.user.findMany({
+      where: { AssignedWorkerIds: { has: workerId } },
+    });
+    return rows.map(r => mapUser(r));
   }
 }
 
-// Export singleton instance
 export const userRepository = new UserRepository();

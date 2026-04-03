@@ -1,0 +1,4 @@
+# ggshield ignore list
+# Files containing only test/seed data - no real secrets
+
+prisma/seed.ts

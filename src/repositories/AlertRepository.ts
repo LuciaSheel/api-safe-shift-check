@@ -1,200 +1,207 @@
 /**
- * Alert Repository
- * Handles all data access operations for Alert entities
+ * Alert Repository (Prisma)
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { dataStore } from '../data/dataStore';
+import { prisma } from '../lib/prisma';
 import {
   Alert,
   CreateAlertDto,
   UpdateAlertDto,
   AlertFilter,
   PaginatedResponse,
+  AlertStatus,
+  AlertSeverity,
+  AlertType,
 } from '../types';
 import { IBaseRepository } from './interfaces';
+import type { Alert as PrismaAlert } from '@prisma/client';
+
+function mapAlert(row: PrismaAlert): Alert {
+  return {
+    Id: row.Id,
+    ShiftId: row.ShiftId,
+    WorkerId: row.WorkerId,
+    BackupContactId: row.BackupContactId ?? undefined,
+    Type: row.Type as AlertType,
+    Status: row.Status as AlertStatus,
+    Severity: row.Severity as AlertSeverity,
+    Message: row.Message,
+    CreatedAt: row.CreatedAt.toISOString(),
+    AcknowledgedAt: row.AcknowledgedAt?.toISOString(),
+    AcknowledgedBy: row.AcknowledgedBy ?? undefined,
+    ResolvedAt: row.ResolvedAt?.toISOString(),
+    ResolvedBy: row.ResolvedBy ?? undefined,
+    EscalatedToIndex: row.EscalatedToIndex,
+    LastEscalatedAt: row.LastEscalatedAt?.toISOString(),
+    Latitude: row.Latitude ?? undefined,
+    Longitude: row.Longitude ?? undefined,
+  };
+}
 
 export class AlertRepository implements IBaseRepository<Alert, CreateAlertDto, UpdateAlertDto, AlertFilter> {
-  
+
   async findAll(filter?: AlertFilter): Promise<PaginatedResponse<Alert>> {
-    let filteredAlerts = [...dataStore.alerts];
-
-    // Apply filters
-    if (filter) {
-      if (filter.WorkerId) {
-        filteredAlerts = filteredAlerts.filter(a => a.WorkerId === filter.WorkerId);
-      }
-      if (filter.BackupContactId) {
-        filteredAlerts = filteredAlerts.filter(a => a.BackupContactId === filter.BackupContactId);
-      }
-      if (filter.Status) {
-        filteredAlerts = filteredAlerts.filter(a => a.Status === filter.Status);
-      }
-      if (filter.Severity) {
-        filteredAlerts = filteredAlerts.filter(a => a.Severity === filter.Severity);
-      }
-      if (filter.Type) {
-        filteredAlerts = filteredAlerts.filter(a => a.Type === filter.Type);
-      }
-      if (filter.StartDate) {
-        const startDate = new Date(filter.StartDate);
-        filteredAlerts = filteredAlerts.filter(a => new Date(a.CreatedAt) >= startDate);
-      }
-      if (filter.EndDate) {
-        const endDate = new Date(filter.EndDate);
-        filteredAlerts = filteredAlerts.filter(a => new Date(a.CreatedAt) <= endDate);
-      }
-
-      // Apply sorting
-      if (filter.SortBy) {
-        const sortOrder = filter.SortOrder === 'desc' ? -1 : 1;
-        filteredAlerts.sort((a, b) => {
-          const aVal = (a as unknown as Record<string, unknown>)[filter.SortBy!];
-          const bVal = (b as unknown as Record<string, unknown>)[filter.SortBy!];
-          if (typeof aVal === 'string' && typeof bVal === 'string') {
-            return aVal.localeCompare(bVal) * sortOrder;
-          }
-          return 0;
-        });
-      } else {
-        // Default sort by CreatedAt descending
-        filteredAlerts.sort((a, b) => 
-          new Date(b.CreatedAt).getTime() - new Date(a.CreatedAt).getTime()
-        );
-      }
+    const where: Record<string, unknown> = {};
+    if (filter?.WorkerId) where.WorkerId = filter.WorkerId;
+    if (filter?.BackupContactId) where.BackupContactId = filter.BackupContactId;
+    if (filter?.Status) where.Status = filter.Status;
+    if (filter?.Severity) where.Severity = filter.Severity;
+    if (filter?.Type) where.Type = filter.Type;
+    if (filter?.StartDate || filter?.EndDate) {
+      where.CreatedAt = {
+        ...(filter.StartDate ? { gte: new Date(filter.StartDate) } : {}),
+        ...(filter.EndDate ? { lte: new Date(filter.EndDate) } : {}),
+      };
     }
 
-    // Apply pagination
-    const page = filter?.Page || 1;
-    const pageSize = filter?.PageSize || 10;
-    const total = filteredAlerts.length;
-    const totalPages = Math.ceil(total / pageSize);
-    const startIndex = (page - 1) * pageSize;
-    const paginatedAlerts = filteredAlerts.slice(startIndex, startIndex + pageSize);
+    const page = filter?.Page ?? 1;
+    const pageSize = filter?.PageSize ?? 10;
+    const skip = (page - 1) * pageSize;
+    const orderBy = filter?.SortBy
+      ? { [filter.SortBy]: (filter.SortOrder ?? 'asc') as 'asc' | 'desc' }
+      : { CreatedAt: 'desc' as const };
+
+    const [total, rows] = await Promise.all([
+      prisma.alert.count({ where }),
+      prisma.alert.findMany({ where, skip, take: pageSize, orderBy }),
+    ]);
 
     return {
-      Data: paginatedAlerts,
+      Data: rows.map(mapAlert),
       Total: total,
       Page: page,
       PageSize: pageSize,
-      TotalPages: totalPages,
+      TotalPages: Math.ceil(total / pageSize),
     };
   }
 
   async findById(id: string): Promise<Alert | null> {
-    return dataStore.alerts.find(a => a.Id === id) || null;
+    const row = await prisma.alert.findUnique({ where: { Id: id } });
+    return row ? mapAlert(row) : null;
   }
 
   async create(data: CreateAlertDto): Promise<Alert> {
-    const createdAt = new Date().toISOString();
-    const newAlert: Alert = {
-      Id: `alert-${uuidv4()}`,
-      ShiftId: data.ShiftId,
-      WorkerId: data.WorkerId,
-      BackupContactId: data.BackupContactId,
-      Type: data.Type,
-      Severity: data.Severity,
-      Message: data.Message,
-      Status: 'Active',
-      CreatedAt: createdAt,
-      EscalatedToIndex: 0, // Start with first backup contact
-      LastEscalatedAt: createdAt, // Track when escalation started
-      Latitude: data.Latitude,
-      Longitude: data.Longitude,
-    };
-    dataStore.alerts.push(newAlert);
-    return newAlert;
+    const now = new Date();
+    const row = await prisma.alert.create({
+      data: {
+        Id: `alert-${uuidv4()}`,
+        ShiftId: data.ShiftId,
+        WorkerId: data.WorkerId,
+        BackupContactId: data.BackupContactId,
+        Type: data.Type,
+        Severity: data.Severity,
+        Message: data.Message,
+        Status: 'Active',
+        EscalatedToIndex: 0,
+        LastEscalatedAt: now,
+        Latitude: data.Latitude,
+        Longitude: data.Longitude,
+      },
+    });
+    return mapAlert(row);
   }
 
   async update(id: string, data: UpdateAlertDto): Promise<Alert | null> {
-    const index = dataStore.alerts.findIndex(a => a.Id === id);
-    if (index === -1) return null;
-
-    dataStore.alerts[index] = {
-      ...dataStore.alerts[index],
-      ...data,
-    };
-
-    return dataStore.alerts[index];
+    try {
+      const row = await prisma.alert.update({
+        where: { Id: id },
+        data: {
+          ...(data.Status && { Status: data.Status }),
+          ...(data.AcknowledgedAt && { AcknowledgedAt: new Date(data.AcknowledgedAt) }),
+          ...(data.AcknowledgedBy !== undefined && { AcknowledgedBy: data.AcknowledgedBy }),
+          ...(data.ResolvedAt && { ResolvedAt: new Date(data.ResolvedAt) }),
+          ...(data.ResolvedBy !== undefined && { ResolvedBy: data.ResolvedBy }),
+          ...(data.EscalatedToIndex !== undefined && { EscalatedToIndex: data.EscalatedToIndex }),
+          ...(data.LastEscalatedAt && { LastEscalatedAt: new Date(data.LastEscalatedAt) }),
+        },
+      });
+      return mapAlert(row);
+    } catch {
+      return null;
+    }
   }
 
   async delete(id: string): Promise<boolean> {
-    const index = dataStore.alerts.findIndex(a => a.Id === id);
-    if (index === -1) return false;
-
-    dataStore.alerts.splice(index, 1);
-    return true;
+    try {
+      await prisma.alert.delete({ where: { Id: id } });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async exists(id: string): Promise<boolean> {
-    return dataStore.alerts.some(a => a.Id === id);
+    const count = await prisma.alert.count({ where: { Id: id } });
+    return count > 0;
   }
 
   async count(filter?: AlertFilter): Promise<number> {
-    let filteredAlerts = [...dataStore.alerts];
-
-    if (filter) {
-      if (filter.Status) {
-        filteredAlerts = filteredAlerts.filter(a => a.Status === filter.Status);
-      }
-      if (filter.WorkerId) {
-        filteredAlerts = filteredAlerts.filter(a => a.WorkerId === filter.WorkerId);
-      }
-    }
-
-    return filteredAlerts.length;
+    const where: Record<string, unknown> = {};
+    if (filter?.Status) where.Status = filter.Status;
+    if (filter?.WorkerId) where.WorkerId = filter.WorkerId;
+    return prisma.alert.count({ where });
   }
 
   async findActiveAlerts(): Promise<Alert[]> {
-    return dataStore.alerts
-      .filter(a => a.Status === 'Active')
-      .sort((a, b) => new Date(b.CreatedAt).getTime() - new Date(a.CreatedAt).getTime());
-  }
-
-  async findByWorkerId(workerId: string): Promise<Alert[]> {
-    return dataStore.alerts
-      .filter(a => a.WorkerId === workerId)
-      .sort((a, b) => new Date(b.CreatedAt).getTime() - new Date(a.CreatedAt).getTime());
-  }
-
-  async findByBackupContactId(backupContactId: string): Promise<Alert[]> {
-    return dataStore.alerts
-      .filter(a => a.BackupContactId === backupContactId)
-      .sort((a, b) => new Date(b.CreatedAt).getTime() - new Date(a.CreatedAt).getTime());
+    const rows = await prisma.alert.findMany({
+      where: { Status: 'Active' },
+      orderBy: { CreatedAt: 'asc' },
+    });
+    return rows.map(mapAlert);
   }
 
   async acknowledgeAlert(id: string, acknowledgedBy: string): Promise<Alert | null> {
-    const index = dataStore.alerts.findIndex(a => a.Id === id);
-    if (index === -1) return null;
-
-    dataStore.alerts[index] = {
-      ...dataStore.alerts[index],
-      Status: 'Acknowledged',
-      AcknowledgedAt: new Date().toISOString(),
-      AcknowledgedBy: acknowledgedBy,
-    };
-
-    return dataStore.alerts[index];
+    try {
+      const row = await prisma.alert.update({
+        where: { Id: id },
+        data: {
+          Status: 'Acknowledged',
+          AcknowledgedAt: new Date(),
+          AcknowledgedBy: acknowledgedBy,
+        },
+      });
+      return mapAlert(row);
+    } catch {
+      return null;
+    }
   }
 
   async resolveAlert(id: string, resolvedBy: string): Promise<Alert | null> {
-    const index = dataStore.alerts.findIndex(a => a.Id === id);
-    if (index === -1) return null;
+    try {
+      const row = await prisma.alert.update({
+        where: { Id: id },
+        data: {
+          Status: 'Resolved',
+          ResolvedAt: new Date(),
+          ResolvedBy: resolvedBy,
+        },
+      });
+      return mapAlert(row);
+    } catch {
+      return null;
+    }
+  }
 
-    dataStore.alerts[index] = {
-      ...dataStore.alerts[index],
-      Status: 'Resolved',
-      ResolvedAt: new Date().toISOString(),
-      ResolvedBy: resolvedBy,
-    };
+  async findByWorkerId(workerId: string): Promise<Alert[]> {
+    const rows = await prisma.alert.findMany({
+      where: { WorkerId: workerId },
+      orderBy: { CreatedAt: 'desc' },
+    });
+    return rows.map(mapAlert);
+  }
 
-    return dataStore.alerts[index];
+  async findByBackupContactId(backupContactId: string): Promise<Alert[]> {
+    const rows = await prisma.alert.findMany({
+      where: { BackupContactId: backupContactId },
+      orderBy: { CreatedAt: 'desc' },
+    });
+    return rows.map(mapAlert);
   }
 
   async countPendingAlerts(): Promise<number> {
-    return dataStore.alerts.filter(a => a.Status === 'Active').length;
+    return prisma.alert.count({ where: { Status: { in: ['Active', 'Acknowledged'] } } });
   }
 }
 
-// Export singleton instance
 export const alertRepository = new AlertRepository();

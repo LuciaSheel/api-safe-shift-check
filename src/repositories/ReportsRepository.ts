@@ -1,9 +1,10 @@
 /**
- * Reports Repository
- * Handles all data access operations for reporting data
+ * Reports Repository (Prisma)
+ * Computes reporting data directly from the database.
+ * Chart data is computed from real records rather than stored static arrays.
  */
 
-import { dataStore } from '../data/dataStore';
+import { prisma } from '../lib/prisma';
 import {
   DashboardMetrics,
   TimeTrackingRecord,
@@ -13,34 +14,31 @@ import {
 } from '../types';
 
 export class ReportsRepository {
+
   async getDashboardMetrics(): Promise<DashboardMetrics> {
-    const totalWorkers = dataStore.users.filter(u => ['Cleaner', 'Booker', 'Director', 'BackupContact'].includes(u.Role)).length;
-    const activeWorkers = dataStore.shifts.filter(s => s.Status === 'Active').length;
-    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    const totalShiftsToday = dataStore.shifts.filter(s => {
-      const shiftStart = new Date(s.StartTime);
-      return shiftStart >= today && shiftStart < tomorrow;
-    }).length;
 
-    const pendingAlerts = dataStore.alerts.filter(a => a.Status === 'Active').length;
+    const [totalWorkers, activeWorkers, totalShiftsToday, pendingAlerts, checkIns] =
+      await Promise.all([
+        prisma.user.count({ where: { Role: { in: ['Cleaner', 'Booker', 'Director'] }, IsActive: true } }),
+        prisma.shift.count({ where: { Status: 'Active' } }),
+        prisma.shift.count({ where: { StartTime: { gte: today, lt: tomorrow } } }),
+        prisma.alert.count({ where: { Status: 'Active' } }),
+        prisma.checkIn.findMany({ select: { Status: true, ResponseSeconds: true } }),
+      ]);
 
-    const confirmedCheckIns = dataStore.checkIns.filter(c => c.Status === 'Confirmed');
-    const totalCheckIns = dataStore.checkIns.length;
-    const complianceRate = totalCheckIns > 0 
-      ? Math.round((confirmedCheckIns.length / totalCheckIns) * 100 * 10) / 10 
-      : 100;
-
-    const avgResponseTime = confirmedCheckIns.length > 0
-      ? Math.round(
-          confirmedCheckIns.reduce((sum, c) => sum + (c.ResponseSeconds || 0), 0) / 
-          confirmedCheckIns.length
-        )
-      : 0;
+    const confirmed = checkIns.filter(c => c.Status === 'Confirmed');
+    const complianceRate =
+      checkIns.length > 0
+        ? Math.round((confirmed.length / checkIns.length) * 1000) / 10
+        : 100;
+    const avgResponseTime =
+      confirmed.length > 0
+        ? Math.round(confirmed.reduce((s, c) => s + (c.ResponseSeconds ?? 0), 0) / confirmed.length)
+        : 0;
 
     return {
       TotalWorkers: totalWorkers,
@@ -53,126 +51,175 @@ export class ReportsRepository {
   }
 
   async getTimeTrackingRecords(filter?: ReportFilter): Promise<TimeTrackingRecord[]> {
-    let records = [...dataStore.timeTrackingRecords];
-
-    if (filter) {
-      if (filter.WorkerId) {
-        records = records.filter(r => r.WorkerId === filter.WorkerId);
-      }
-      if (filter.StartDate) {
-        records = records.filter(r => r.Date >= filter.StartDate!);
-      }
-      if (filter.EndDate) {
-        records = records.filter(r => r.Date <= filter.EndDate!);
-      }
-    }
-
-    return records;
+    return this.generateTimeTrackingRecords(filter);
   }
 
   async getComplianceRecords(filter?: ReportFilter): Promise<ComplianceRecord[]> {
-    let records = [...dataStore.complianceRecords];
-
-    if (filter) {
-      if (filter.WorkerId) {
-        records = records.filter(r => r.WorkerId === filter.WorkerId);
-      }
-    }
-
-    return records;
+    return this.generateComplianceRecords(filter);
   }
 
   async getWeeklyHoursData(): Promise<ChartDataPoint[]> {
-    return [...dataStore.weeklyHoursData];
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - 6);
+    weekStart.setHours(0, 0, 0, 0);
+
+    const shifts = await prisma.shift.findMany({
+      where: { Status: 'Completed', StartTime: { gte: weekStart }, EndTime: { not: null } },
+      select: { StartTime: true, EndTime: true },
+    });
+
+    const hoursPerDay: Record<string, number> = {};
+    for (const s of shifts) {
+      const label = days[s.StartTime.getDay()];
+      const hrs = s.EndTime
+        ? (s.EndTime.getTime() - s.StartTime.getTime()) / 3600000
+        : 0;
+      hoursPerDay[label] = (hoursPerDay[label] ?? 0) + hrs;
+    }
+
+    return days.map(d => ({ Name: d, Value: Math.round((hoursPerDay[d] ?? 0) * 10) / 10 }));
   }
 
   async getComplianceTrendData(): Promise<ChartDataPoint[]> {
-    return [...dataStore.complianceTrendData];
+    const result: ChartDataPoint[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const weekEnd = new Date();
+      weekEnd.setDate(weekEnd.getDate() - i * 7);
+      const weekStart = new Date(weekEnd);
+      weekStart.setDate(weekEnd.getDate() - 7);
+
+      const [total, confirmed] = await Promise.all([
+        prisma.checkIn.count({ where: { ScheduledTime: { gte: weekStart, lt: weekEnd } } }),
+        prisma.checkIn.count({ where: { ScheduledTime: { gte: weekStart, lt: weekEnd }, Status: 'Confirmed' } }),
+      ]);
+
+      const rate = total > 0 ? Math.round((confirmed / total) * 1000) / 10 : 100;
+      result.push({ Name: `Week ${6 - i}`, Value: rate, Compliance: rate });
+    }
+    return result;
   }
 
   async getAlertsByTypeData(): Promise<ChartDataPoint[]> {
-    return [...dataStore.alertsByTypeData];
+    const types = [
+      { key: 'MissedCheckIn', label: 'Missed Check-in' },
+      { key: 'Emergency', label: 'Emergency' },
+      { key: 'SystemAlert', label: 'System Alert' },
+    ];
+    return Promise.all(
+      types.map(async ({ key, label }) => {
+        const count = await prisma.alert.count({ where: { Type: key } });
+        return { Name: label, Value: count };
+      })
+    );
   }
 
   async getActiveWorkersData(): Promise<ChartDataPoint[]> {
-    return [...dataStore.activeWorkersData];
+    const hours = [6, 8, 10, 12, 14, 16, 18, 20];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    return Promise.all(
+      hours.map(async h => {
+        const slotStart = new Date(today);
+        slotStart.setHours(h, 0, 0, 0);
+        const slotEnd = new Date(today);
+        slotEnd.setHours(h + 2, 0, 0, 0);
+
+        const count = await prisma.shift.count({
+          where: {
+            Status: 'Active',
+            StartTime: { lt: slotEnd },
+            OR: [{ EndTime: null }, { EndTime: { gt: slotStart } }],
+          },
+        });
+
+        const label = h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`;
+        return { Name: label, Value: count, Workers: count };
+      })
+    );
   }
 
-  // Generate time tracking records from actual shift data
   async generateTimeTrackingRecords(filter?: ReportFilter): Promise<TimeTrackingRecord[]> {
-    let shifts = dataStore.shifts.filter(s => s.Status === 'Completed' && s.EndTime);
-
-    if (filter) {
-      if (filter.WorkerId) {
-        shifts = shifts.filter(s => s.WorkerId === filter.WorkerId);
-      }
-      if (filter.LocationId) {
-        shifts = shifts.filter(s => s.LocationId === filter.LocationId);
-      }
-      if (filter.StartDate) {
-        shifts = shifts.filter(s => new Date(s.StartTime) >= new Date(filter.StartDate!));
-      }
-      if (filter.EndDate) {
-        shifts = shifts.filter(s => new Date(s.StartTime) <= new Date(filter.EndDate!));
-      }
+    const where: Record<string, unknown> = { Status: 'Completed', EndTime: { not: null } };
+    if (filter?.WorkerId) where.WorkerId = filter.WorkerId;
+    if (filter?.LocationId) where.LocationId = filter.LocationId;
+    if (filter?.StartDate || filter?.EndDate) {
+      where.StartTime = {
+        ...(filter?.StartDate ? { gte: new Date(filter.StartDate) } : {}),
+        ...(filter?.EndDate ? { lte: new Date(filter.EndDate) } : {}),
+      };
     }
 
-    return shifts.map(shift => {
-      const worker = dataStore.users.find(u => u.Id === shift.WorkerId);
-      const location = dataStore.locations.find(l => l.Id === shift.LocationId);
-      const shiftCheckIns = dataStore.checkIns.filter(c => c.ShiftId === shift.Id);
-      
-      const startTime = new Date(shift.StartTime);
-      const endTime = new Date(shift.EndTime!);
-      const totalHours = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60) * 10) / 10;
+    const shifts = await prisma.shift.findMany({
+      where,
+      include: {
+        Worker: { select: { FirstName: true, LastName: true } },
+        Location: { select: { Name: true } },
+        CheckIns: { select: { Status: true } },
+      },
+      orderBy: { StartTime: 'desc' },
+    });
 
+    return shifts.map(s => {
+      const end = s.EndTime!;
+      const totalHours =
+        Math.round(((end.getTime() - s.StartTime.getTime()) / 3600000) * 10) / 10;
       return {
-        WorkerId: shift.WorkerId,
-        WorkerName: worker ? `${worker.FirstName} ${worker.LastName}` : 'Unknown',
-        Date: startTime.toISOString().split('T')[0],
-        StartTime: startTime.toTimeString().slice(0, 5),
-        EndTime: endTime.toTimeString().slice(0, 5),
+        WorkerId: s.WorkerId,
+        WorkerName: `${s.Worker.FirstName} ${s.Worker.LastName}`,
+        Date: s.StartTime.toISOString().split('T')[0],
+        StartTime: s.StartTime.toTimeString().slice(0, 5),
+        EndTime: end.toTimeString().slice(0, 5),
         TotalHours: totalHours,
-        Location: location?.Name || 'Unknown',
-        CheckInsCompleted: shiftCheckIns.filter(c => c.Status === 'Confirmed').length,
-        CheckInsMissed: shiftCheckIns.filter(c => c.Status === 'Missed').length,
+        Location: s.Location.Name,
+        CheckInsCompleted: s.CheckIns.filter(c => c.Status === 'Confirmed').length,
+        CheckInsMissed: s.CheckIns.filter(c => c.Status === 'Missed').length,
       };
     });
   }
 
-  // Generate compliance records from actual check-in data
   async generateComplianceRecords(filter?: ReportFilter): Promise<ComplianceRecord[]> {
-    const workers = dataStore.users.filter(u => ['Cleaner', 'Booker', 'Director', 'BackupContact'].includes(u.Role) && u.IsActive);
-    
-    return workers
-      .filter(w => !filter?.WorkerId || w.Id === filter.WorkerId)
-      .map(worker => {
-        const workerCheckIns = dataStore.checkIns.filter(c => c.WorkerId === worker.Id);
-        const completedCheckIns = workerCheckIns.filter(c => c.Status === 'Confirmed');
-        const missedCheckIns = workerCheckIns.filter(c => c.Status === 'Missed');
-        
-        const complianceRate = workerCheckIns.length > 0
-          ? Math.round((completedCheckIns.length / workerCheckIns.length) * 100 * 10) / 10
-          : 100;
+    const workers = await prisma.user.findMany({
+      where: {
+        Role: { in: ['Cleaner', 'Booker', 'Director'] },
+        IsActive: true,
+        ...(filter?.WorkerId ? { Id: filter.WorkerId } : {}),
+      },
+    });
 
-        const avgResponseTime = completedCheckIns.length > 0
-          ? Math.round(
-              completedCheckIns.reduce((sum, c) => sum + (c.ResponseSeconds || 0), 0) / 
-              completedCheckIns.length
-            )
-          : 0;
+    return Promise.all(
+      workers.map(async w => {
+        const checkIns = await prisma.checkIn.findMany({
+          where: { WorkerId: w.Id },
+          select: { Status: true, ResponseSeconds: true },
+        });
+        const completed = checkIns.filter(c => c.Status === 'Confirmed');
+        const missed = checkIns.filter(c => c.Status === 'Missed');
+        const rate =
+          checkIns.length > 0
+            ? Math.round((completed.length / checkIns.length) * 1000) / 10
+            : 100;
+        const avgRt =
+          completed.length > 0
+            ? Math.round(completed.reduce((s, c) => s + (c.ResponseSeconds ?? 0), 0) / completed.length)
+            : 0;
 
         return {
-          WorkerId: worker.Id,
-          WorkerName: `${worker.FirstName} ${worker.LastName}`,
-          Period: 'This Week',
-          TotalCheckIns: workerCheckIns.length,
-          CompletedCheckIns: completedCheckIns.length,
-          MissedCheckIns: missedCheckIns.length,
-          ComplianceRate: complianceRate,
-          AverageResponseTime: avgResponseTime,
+          WorkerId: w.Id,
+          WorkerName: `${w.FirstName} ${w.LastName}`,
+          Period: 'All Time',
+          TotalCheckIns: checkIns.length,
+          CompletedCheckIns: completed.length,
+          MissedCheckIns: missed.length,
+          ComplianceRate: rate,
+          AverageResponseTime: avgRt,
         };
-      });
+      })
+    );
   }
 
   async getShiftReports(filter?: ReportFilter): Promise<{
@@ -195,67 +242,52 @@ export class ReportsRepository {
     }>;
     Total: number;
   }> {
-    let shifts = [...dataStore.shifts];
-
-    // Apply filters
-    if (filter) {
-      if (filter.WorkerId) {
-        shifts = shifts.filter(s => s.WorkerId === filter.WorkerId);
-      }
-      if (filter.LocationId) {
-        shifts = shifts.filter(s => s.LocationId === filter.LocationId);
-      }
-      if (filter.StartDate) {
-        shifts = shifts.filter(s => s.StartTime >= filter.StartDate!);
-      }
-      if (filter.EndDate) {
-        shifts = shifts.filter(s => s.StartTime <= filter.EndDate!);
-      }
+    const where: Record<string, unknown> = {};
+    if (filter?.WorkerId) where.WorkerId = filter.WorkerId;
+    if (filter?.LocationId) where.LocationId = filter.LocationId;
+    if (filter?.StartDate || filter?.EndDate) {
+      where.StartTime = {
+        ...(filter?.StartDate ? { gte: new Date(filter.StartDate) } : {}),
+        ...(filter?.EndDate ? { lte: new Date(filter.EndDate) } : {}),
+      };
     }
 
-    // Sort by start time descending (most recent first)
-    shifts.sort((a, b) => new Date(b.StartTime).getTime() - new Date(a.StartTime).getTime());
+    const shifts = await prisma.shift.findMany({
+      where,
+      include: {
+        Worker: { select: { FirstName: true, LastName: true } },
+        Location: { select: { Name: true } },
+        CheckIns: { select: { Status: true, ResponseSeconds: true } },
+        Alerts: { select: { Id: true } },
+      },
+      orderBy: { StartTime: 'desc' },
+    });
 
-    const items = shifts.map(shift => {
-      const worker = dataStore.users.find(u => u.Id === shift.WorkerId);
-      const location = dataStore.locations.find(l => l.Id === shift.LocationId);
-      const shiftCheckIns = dataStore.checkIns.filter(c => c.ShiftId === shift.Id);
-      const shiftAlerts = dataStore.alerts.filter(a => a.ShiftId === shift.Id);
-
-      const missedCheckIns = shiftCheckIns.filter(c => c.Status === 'Missed').length;
-      const onTimeCheckIns = shiftCheckIns.filter(c => c.Status === 'Confirmed' && (c.ResponseSeconds || 0) <= 60).length;
-      const lateCheckIns = shiftCheckIns.filter(c => c.Status === 'Confirmed' && (c.ResponseSeconds || 0) > 60).length;
-
-      // Calculate duration in minutes
-      const startTime = new Date(shift.StartTime);
-      const endTime = shift.EndTime ? new Date(shift.EndTime) : new Date();
-      const duration = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
-
+    const items = shifts.map(s => {
+      const now = new Date();
+      const end = s.EndTime ?? now;
+      const duration = Math.round((end.getTime() - s.StartTime.getTime()) / 60000);
       return {
-        ShiftId: shift.Id,
-        WorkerName: worker ? `${worker.FirstName} ${worker.LastName}` : 'Unknown',
-        WorkerId: shift.WorkerId,
-        LocationName: location?.Name || 'Unknown',
-        LocationId: shift.LocationId,
-        StartTime: shift.StartTime,
-        EndTime: shift.EndTime || null,
+        ShiftId: s.Id,
+        WorkerName: `${s.Worker.FirstName} ${s.Worker.LastName}`,
+        WorkerId: s.WorkerId,
+        LocationName: s.Location.Name,
+        LocationId: s.LocationId,
+        StartTime: s.StartTime.toISOString(),
+        EndTime: s.EndTime?.toISOString() ?? null,
         Duration: duration,
-        Status: shift.Status as string,
-        TotalCheckIns: shiftCheckIns.length,
-        MissedCheckIns: missedCheckIns,
-        OnTimeCheckIns: onTimeCheckIns,
-        LateCheckIns: lateCheckIns,
-        Alerts: shiftAlerts.length,
-        Notes: shift.Notes,
+        Status: s.Status,
+        TotalCheckIns: s.CheckIns.length,
+        MissedCheckIns: s.CheckIns.filter(c => c.Status === 'Missed').length,
+        OnTimeCheckIns: s.CheckIns.filter(c => c.Status === 'Confirmed' && (c.ResponseSeconds ?? 0) <= 60).length,
+        LateCheckIns: s.CheckIns.filter(c => c.Status === 'Confirmed' && (c.ResponseSeconds ?? 0) > 60).length,
+        Alerts: s.Alerts.length,
+        Notes: s.Notes ?? undefined,
       };
     });
 
-    return {
-      Items: items,
-      Total: items.length,
-    };
+    return { Items: items, Total: items.length };
   }
 }
 
-// Export singleton instance
 export const reportsRepository = new ReportsRepository();

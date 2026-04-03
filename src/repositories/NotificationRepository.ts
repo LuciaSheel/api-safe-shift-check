@@ -1,181 +1,159 @@
 /**
- * Notification Repository
- * Handles all data access operations for Notification entities
+ * Notification Repository (Prisma)
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { dataStore } from '../data/dataStore';
+import { prisma } from '../lib/prisma';
 import {
   Notification,
   CreateNotificationDto,
   UpdateNotificationDto,
   NotificationFilter,
   PaginatedResponse,
+  NotificationType,
 } from '../types';
 import { IBaseRepository } from './interfaces';
+import type { Notification as PrismaNotification } from '@prisma/client';
+
+function mapNotification(row: PrismaNotification): Notification {
+  return {
+    Id: row.Id,
+    UserId: row.UserId,
+    Type: row.Type as NotificationType,
+    Title: row.Title,
+    Message: row.Message,
+    IsRead: row.IsRead,
+    CreatedAt: row.CreatedAt.toISOString(),
+    ActionUrl: row.ActionUrl ?? undefined,
+  };
+}
 
 export class NotificationRepository implements IBaseRepository<Notification, CreateNotificationDto, UpdateNotificationDto, NotificationFilter> {
-  
+
   async findAll(filter?: NotificationFilter): Promise<PaginatedResponse<Notification>> {
-    let filteredNotifications = [...dataStore.notifications];
+    const where: Record<string, unknown> = {};
+    if (filter?.UserId) where.UserId = filter.UserId;
+    if (filter?.Type) where.Type = filter.Type;
+    if (filter?.IsRead !== undefined) where.IsRead = filter.IsRead;
 
-    // Apply filters
-    if (filter) {
-      if (filter.UserId) {
-        filteredNotifications = filteredNotifications.filter(n => n.UserId === filter.UserId);
-      }
-      if (filter.Type) {
-        filteredNotifications = filteredNotifications.filter(n => n.Type === filter.Type);
-      }
-      if (filter.IsRead !== undefined) {
-        filteredNotifications = filteredNotifications.filter(n => n.IsRead === filter.IsRead);
-      }
+    const page = filter?.Page ?? 1;
+    const pageSize = filter?.PageSize ?? 10;
+    const skip = (page - 1) * pageSize;
+    const orderBy = filter?.SortBy
+      ? { [filter.SortBy]: (filter.SortOrder ?? 'asc') as 'asc' | 'desc' }
+      : { CreatedAt: 'desc' as const };
 
-      // Apply sorting
-      if (filter.SortBy) {
-        const sortOrder = filter.SortOrder === 'desc' ? -1 : 1;
-        filteredNotifications.sort((a, b) => {
-          const aVal = (a as unknown as Record<string, unknown>)[filter.SortBy!];
-          const bVal = (b as unknown as Record<string, unknown>)[filter.SortBy!];
-          if (typeof aVal === 'string' && typeof bVal === 'string') {
-            return aVal.localeCompare(bVal) * sortOrder;
-          }
-          return 0;
-        });
-      } else {
-        // Default sort by CreatedAt descending
-        filteredNotifications.sort((a, b) => 
-          new Date(b.CreatedAt).getTime() - new Date(a.CreatedAt).getTime()
-        );
-      }
-    }
-
-    // Apply pagination
-    const page = filter?.Page || 1;
-    const pageSize = filter?.PageSize || 10;
-    const total = filteredNotifications.length;
-    const totalPages = Math.ceil(total / pageSize);
-    const startIndex = (page - 1) * pageSize;
-    const paginatedNotifications = filteredNotifications.slice(startIndex, startIndex + pageSize);
+    const [total, rows] = await Promise.all([
+      prisma.notification.count({ where }),
+      prisma.notification.findMany({ where, skip, take: pageSize, orderBy }),
+    ]);
 
     return {
-      Data: paginatedNotifications,
+      Data: rows.map(mapNotification),
       Total: total,
       Page: page,
       PageSize: pageSize,
-      TotalPages: totalPages,
+      TotalPages: Math.ceil(total / pageSize),
     };
   }
 
   async findById(id: string): Promise<Notification | null> {
-    return dataStore.notifications.find(n => n.Id === id) || null;
+    const row = await prisma.notification.findUnique({ where: { Id: id } });
+    return row ? mapNotification(row) : null;
   }
 
   async create(data: CreateNotificationDto): Promise<Notification> {
-    const newNotification: Notification = {
-      Id: `notif-${uuidv4()}`,
-      UserId: data.UserId,
-      Type: data.Type,
-      Title: data.Title,
-      Message: data.Message,
-      ActionUrl: data.ActionUrl,
-      IsRead: false,
-      CreatedAt: new Date().toISOString(),
-    };
-    dataStore.notifications.push(newNotification);
-    return newNotification;
+    const row = await prisma.notification.create({
+      data: {
+        Id: `notif-${uuidv4()}`,
+        UserId: data.UserId,
+        Type: data.Type,
+        Title: data.Title,
+        Message: data.Message,
+        ActionUrl: data.ActionUrl,
+        IsRead: false,
+      },
+    });
+    return mapNotification(row);
   }
 
   async update(id: string, data: UpdateNotificationDto): Promise<Notification | null> {
-    const index = dataStore.notifications.findIndex(n => n.Id === id);
-    if (index === -1) return null;
-
-    dataStore.notifications[index] = {
-      ...dataStore.notifications[index],
-      ...data,
-    };
-
-    return dataStore.notifications[index];
+    try {
+      const row = await prisma.notification.update({
+        where: { Id: id },
+        data,
+      });
+      return mapNotification(row);
+    } catch {
+      return null;
+    }
   }
 
   async delete(id: string): Promise<boolean> {
-    const index = dataStore.notifications.findIndex(n => n.Id === id);
-    if (index === -1) return false;
-
-    dataStore.notifications.splice(index, 1);
-    return true;
+    try {
+      await prisma.notification.delete({ where: { Id: id } });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async exists(id: string): Promise<boolean> {
-    return dataStore.notifications.some(n => n.Id === id);
+    const count = await prisma.notification.count({ where: { Id: id } });
+    return count > 0;
   }
 
   async count(filter?: NotificationFilter): Promise<number> {
-    let filteredNotifications = [...dataStore.notifications];
-
-    if (filter) {
-      if (filter.UserId) {
-        filteredNotifications = filteredNotifications.filter(n => n.UserId === filter.UserId);
-      }
-      if (filter.IsRead !== undefined) {
-        filteredNotifications = filteredNotifications.filter(n => n.IsRead === filter.IsRead);
-      }
-    }
-
-    return filteredNotifications.length;
+    const where: Record<string, unknown> = {};
+    if (filter?.UserId) where.UserId = filter.UserId;
+    if (filter?.IsRead !== undefined) where.IsRead = filter.IsRead;
+    return prisma.notification.count({ where });
   }
 
   async findByUserId(userId: string): Promise<Notification[]> {
-    return dataStore.notifications
-      .filter(n => n.UserId === userId)
-      .sort((a, b) => new Date(b.CreatedAt).getTime() - new Date(a.CreatedAt).getTime());
+    const rows = await prisma.notification.findMany({
+      where: { UserId: userId },
+      orderBy: { CreatedAt: 'desc' },
+    });
+    return rows.map(mapNotification);
   }
 
   async findUnreadByUserId(userId: string): Promise<Notification[]> {
-    return dataStore.notifications
-      .filter(n => n.UserId === userId && !n.IsRead)
-      .sort((a, b) => new Date(b.CreatedAt).getTime() - new Date(a.CreatedAt).getTime());
+    const rows = await prisma.notification.findMany({
+      where: { UserId: userId, IsRead: false },
+      orderBy: { CreatedAt: 'desc' },
+    });
+    return rows.map(mapNotification);
   }
 
   async markAsRead(id: string): Promise<Notification | null> {
-    const index = dataStore.notifications.findIndex(n => n.Id === id);
-    if (index === -1) return null;
-
-    dataStore.notifications[index] = {
-      ...dataStore.notifications[index],
-      IsRead: true,
-    };
-
-    return dataStore.notifications[index];
+    try {
+      const row = await prisma.notification.update({
+        where: { Id: id },
+        data: { IsRead: true },
+      });
+      return mapNotification(row);
+    } catch {
+      return null;
+    }
   }
 
   async markAllAsReadForUser(userId: string): Promise<number> {
-    let count = 0;
-    dataStore.notifications.forEach((n, index) => {
-      if (n.UserId === userId && !n.IsRead) {
-        dataStore.notifications[index].IsRead = true;
-        count++;
-      }
+    const result = await prisma.notification.updateMany({
+      where: { UserId: userId, IsRead: false },
+      data: { IsRead: true },
     });
-    return count;
+    return result.count;
   }
 
   async deleteAllForUser(userId: string): Promise<number> {
-    const initialLength = dataStore.notifications.length;
-    const filtered = dataStore.notifications.filter(n => n.UserId !== userId);
-    const deletedCount = initialLength - filtered.length;
-    
-    // Update the array in place
-    dataStore.notifications.length = 0;
-    dataStore.notifications.push(...filtered);
-    
-    return deletedCount;
+    const result = await prisma.notification.deleteMany({ where: { UserId: userId } });
+    return result.count;
   }
 
   async countUnreadForUser(userId: string): Promise<number> {
-    return dataStore.notifications.filter(n => n.UserId === userId && !n.IsRead).length;
+    return prisma.notification.count({ where: { UserId: userId, IsRead: false } });
   }
 }
 
-// Export singleton instance
 export const notificationRepository = new NotificationRepository();

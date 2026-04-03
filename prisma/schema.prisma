@@ -1,0 +1,168 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  Id                       String    @id @default(uuid()) @map("id")
+  Email                    String    @unique @map("email")
+  Password                 String?   @map("password")
+  FirstName                String    @map("first_name")
+  LastName                 String    @map("last_name")
+  Role                     String    @map("role")
+  Phone                    String    @map("phone")
+  Avatar                   String?   @map("avatar")
+  IsActive                 Boolean   @default(true) @map("is_active")
+  CreatedAt                DateTime  @default(now()) @map("created_at")
+  UpdatedAt                DateTime? @map("updated_at")
+  AssignedBackupContactIds String[]  @map("assigned_backup_contact_ids")
+  AssignedWorkerIds        String[]  @map("assigned_worker_ids")
+  TeamId                   String?   @map("team_id")
+  TokenVersion             Int       @default(1) @map("token_version")
+
+  Shifts              Shift[]              @relation("WorkerShifts")
+  CheckIns            CheckIn[]            @relation("WorkerCheckIns")
+  Alerts              Alert[]              @relation("WorkerAlerts")
+  Notifications       Notification[]
+  PasswordResetTokens PasswordResetToken[]
+
+  @@map("users")
+}
+
+model Location {
+  Id        String    @id @default(uuid()) @map("id")
+  Name      String    @map("name")
+  Address   String    @map("address")
+  Latitude  Float     @map("latitude")
+  Longitude Float     @map("longitude")
+  IsActive  Boolean   @default(true) @map("is_active")
+  CreatedAt DateTime  @default(now()) @map("created_at")
+  UpdatedAt DateTime? @map("updated_at")
+
+  Shifts Shift[]
+
+  @@map("locations")
+}
+
+model Shift {
+  Id                     String    @id @default(uuid()) @map("id")
+  WorkerId               String    @map("worker_id")
+  LocationId             String    @map("location_id")
+  Status                 String    @default("Active") @map("status")
+  StartTime              DateTime  @default(now()) @map("start_time")
+  EndTime                DateTime? @map("end_time")
+  EstimatedEndTime       DateTime  @map("estimated_end_time")
+  Notes                  String?   @map("notes")
+  CheckInIntervalMinutes Int       @default(15) @map("check_in_interval_minutes")
+  CreatedAt              DateTime  @default(now()) @map("created_at")
+  UpdatedAt              DateTime? @map("updated_at")
+
+  Worker   User     @relation("WorkerShifts", fields: [WorkerId], references: [Id])
+  Location Location @relation(fields: [LocationId], references: [Id])
+  CheckIns CheckIn[]
+  Alerts   Alert[]
+
+  @@map("shifts")
+}
+
+model CheckIn {
+  Id              String    @id @default(uuid()) @map("id")
+  ShiftId         String    @map("shift_id")
+  WorkerId        String    @map("worker_id")
+  ScheduledTime   DateTime  @map("scheduled_time")
+  ResponseTime    DateTime? @map("response_time")
+  Status          String    @default("Pending") @map("status")
+  ResponseSeconds Int?      @map("response_seconds")
+  CreatedAt       DateTime  @default(now()) @map("created_at")
+
+  Shift  Shift @relation(fields: [ShiftId], references: [Id])
+  Worker User  @relation("WorkerCheckIns", fields: [WorkerId], references: [Id])
+
+  @@map("check_ins")
+}
+
+model Alert {
+  Id               String    @id @default(uuid()) @map("id")
+  ShiftId          String    @map("shift_id")
+  WorkerId         String    @map("worker_id")
+  BackupContactId  String?   @map("backup_contact_id")
+  Type             String    @map("type")
+  Status           String    @default("Active") @map("status")
+  Severity         String    @map("severity")
+  Message          String    @map("message")
+  CreatedAt        DateTime  @default(now()) @map("created_at")
+  AcknowledgedAt   DateTime? @map("acknowledged_at")
+  AcknowledgedBy   String?   @map("acknowledged_by")
+  ResolvedAt       DateTime? @map("resolved_at")
+  ResolvedBy       String?   @map("resolved_by")
+  EscalatedToIndex Int       @default(0) @map("escalated_to_index")
+  LastEscalatedAt  DateTime? @map("last_escalated_at")
+  Latitude         Float?    @map("latitude")
+  Longitude        Float?    @map("longitude")
+
+  Shift  Shift @relation(fields: [ShiftId], references: [Id])
+  Worker User  @relation("WorkerAlerts", fields: [WorkerId], references: [Id])
+
+  @@map("alerts")
+}
+
+model Notification {
+  Id        String   @id @default(uuid()) @map("id")
+  UserId    String   @map("user_id")
+  Type      String   @map("type")
+  Title     String   @map("title")
+  Message   String   @map("message")
+  IsRead    Boolean  @default(false) @map("is_read")
+  CreatedAt DateTime @default(now()) @map("created_at")
+  ActionUrl String?  @map("action_url")
+
+  User User @relation(fields: [UserId], references: [Id])
+
+  @@map("notifications")
+}
+
+model Team {
+  Id        String    @id @default(uuid()) @map("id")
+  Name      String    @map("name")
+  ManagerId String    @map("manager_id")
+  MemberIds String[]  @map("member_ids")
+  CreatedAt DateTime  @default(now()) @map("created_at")
+  UpdatedAt DateTime? @map("updated_at")
+
+  @@map("teams")
+}
+
+model SystemSettings {
+  Id                       String    @id @default("settings-001") @map("id")
+  CheckInIntervalMinutes   Int       @default(15) @map("check_in_interval_minutes")
+  ResponseTimeoutSeconds   Int       @default(60) @map("response_timeout_seconds")
+  EscalationDelayMinutes   Int       @default(5) @map("escalation_delay_minutes")
+  EnableSmsNotifications   Boolean   @default(true) @map("enable_sms_notifications")
+  EnableEmailNotifications Boolean   @default(true) @map("enable_email_notifications")
+  EnablePushNotifications  Boolean   @default(true) @map("enable_push_notifications")
+  EmergencyNumber          String    @default("911") @map("emergency_number")
+  NonEmergencyNumber       String    @default("") @map("non_emergency_number")
+  UpdatedAt                DateTime? @map("updated_at")
+  UpdatedBy                String?   @map("updated_by")
+
+  @@map("system_settings")
+}
+
+model PasswordResetToken {
+  Id        String    @id @default(uuid()) @map("id")
+  UserId    String    @map("user_id")
+  Token     String    @unique @map("token")
+  Email     String    @map("email")
+  ExpiresAt DateTime  @map("expires_at")
+  UsedAt    DateTime? @map("used_at")
+  CreatedAt DateTime  @default(now()) @map("created_at")
+
+  User User @relation(fields: [UserId], references: [Id])
+
+  @@map("password_reset_tokens")
+}
