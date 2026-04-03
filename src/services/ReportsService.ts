@@ -58,6 +58,7 @@ export class ReportsService {
       OnTimeCheckIns: number;
       LateCheckIns: number;
       Alerts: number;
+      Notes?: string;
     }>;
     Total: number;
   }> {

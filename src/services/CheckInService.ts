@@ -142,7 +142,7 @@ export class CheckInService {
     });
 
     // Immediately confirm it with 0 response seconds (instant confirmation)
-    return checkInRepository.confirmCheckIn(checkIn.Id, 0);
+    return (await checkInRepository.confirmCheckIn(checkIn.Id, 0))!;
   }
 
   /**

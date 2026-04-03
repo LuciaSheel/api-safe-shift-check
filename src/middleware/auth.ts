@@ -136,5 +136,5 @@ export function requireManagerOrAdmin(req: Request, res: Response, next: NextFun
  * Any authenticated user can do shifts
  */
 export function requireWorker(req: Request, res: Response, next: NextFunction): void {
-  authorize('Cleaner', 'Booker', 'Director', 'BackupContact', 'Administrator')(req, res, next);
+  authorize('Cleaner', 'Booker', 'Director', 'Administrator')(req, res, next);
 }
