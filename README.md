@@ -20,6 +20,8 @@ A comprehensive REST API server for the Safe on Shift worker safety application.
 - **Runtime**: Node.js
 - **Framework**: Express.js
 - **Language**: TypeScript
+- **Database**: PostgreSQL (hosted on Railway)
+- **ORM**: Prisma 5
 - **Authentication**: JWT (jsonwebtoken)
 - **Password Hashing**: bcryptjs
 - **Validation**: express-validator
@@ -28,14 +30,19 @@ A comprehensive REST API server for the Safe on Shift worker safety application.
 ## Project Structure
 
 ```
+prisma/
+├── schema.prisma    # Database schema (9 models)
+├── seed.ts          # Demo data seed script
+├── migrations/      # SQL migration history
+└── tsconfig.json    # TypeScript config for seed script
 src/
 ├── controllers/     # HTTP request handlers
 ├── services/        # Business logic layer
-├── repositories/    # Data access layer
+├── repositories/    # Data access layer (Prisma)
 ├── routes/          # API route definitions
 ├── middleware/      # Auth, validation, error handling
+├── lib/             # Shared utilities (Prisma client)
 ├── types/           # TypeScript interfaces and types
-├── data/            # In-memory data store
 └── index.ts         # Application entry point
 ```
 
@@ -43,8 +50,9 @@ src/
 
 ### Prerequisites
 
-- Node.js 18+ 
-- npm or yarn
+- Node.js 18+
+- npm
+- A PostgreSQL database (Railway recommended — free tier works)
 
 ### Installation
 
@@ -52,8 +60,15 @@ src/
 # Install dependencies
 npm install
 
-# Copy environment variables
+# Copy and fill in environment variables
 cp .env.example .env
+# Edit .env and set DATABASE_URL and DIRECT_URL to your PostgreSQL connection string
+
+# Run database migrations (creates all tables)
+npm run db:migrate
+
+# Seed demo data
+npm run db:seed
 
 # Start development server
 npm run dev
@@ -64,10 +79,13 @@ The server will start on `http://localhost:3001`
 ### Available Scripts
 
 ```bash
-npm run dev      # Start development server with hot reload
-npm run build    # Build for production
-npm start        # Run production build
-npm run lint     # Run ESLint
+npm run dev          # Start development server with hot reload
+npm run build        # Build for production
+npm start            # Run production build
+npm run lint         # Run ESLint
+npm run db:migrate   # Run Prisma migrations (create/update tables)
+npm run db:seed      # Seed database with demo data
+npm run db:reset     # Wipe database and re-run migrations
 ```
 
 ## API Endpoints
@@ -179,9 +197,9 @@ Authorization: Bearer <your-jwt-token>
 
 | Role | Email | Password |
 |------|-------|----------|
-| Worker | sarah.johnson@example.com | demo123 |
-| BackupContact | david.taylor@example.com | demo123 |
-| Manager | robert.anderson@example.com | demo123 |
+| Cleaner (Worker) | sarah.johnson@example.com | demo123 |
+| Booker (Backup Contact) | emma.wilson@example.com | demo123 |
+| Director (Manager) | david.taylor@example.com | demo123 |
 | Administrator | admin@safeonshift.com | admin123 |
 
 ## Example Usage
@@ -203,11 +221,17 @@ curl http://localhost:3001/api/shifts \
 
 | Variable | Description | Default |
 |----------|-------------|---------|
+| DATABASE_URL | PostgreSQL connection string | — |
+| DIRECT_URL | Direct (non-pooled) PostgreSQL URL | — |
 | PORT | Server port | 3001 |
 | JWT_SECRET | JWT signing secret | (dev default) |
 | JWT_EXPIRES_IN | Token expiration | 7d |
 | CORS_ORIGIN | Allowed CORS origin | http://localhost:5173 |
 | NODE_ENV | Environment | development |
+| SEED_DEMO_PASSWORD | Password for demo accounts | demo123 |
+| SEED_ADMIN_PASSWORD | Password for admin account | admin123 |
+
+`DATABASE_URL` and `DIRECT_URL` can be the same value for most setups. Use the public connection string from Railway for local development.
 
 ## License
 
