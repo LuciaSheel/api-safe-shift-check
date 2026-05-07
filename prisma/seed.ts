@@ -50,7 +50,7 @@ async function main(): Promise<void> {
     await prisma.user.upsert({
       where: { Id: u.Id },
       create: u,
-      update: {},
+      update: u,
     });
   }
 
