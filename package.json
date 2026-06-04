@@ -11,7 +11,8 @@
     "test": "jest",
     "db:migrate": "prisma migrate dev",
     "db:seed": "ts-node --transpile-only prisma/seed.ts",
-    "db:reset": "prisma migrate reset"
+    "db:reset": "prisma migrate reset",
+    "postinstall": "prisma generate"
   },
   "prisma": {
     "seed": "ts-node --transpile-only prisma/seed.ts"
