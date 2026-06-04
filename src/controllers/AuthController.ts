@@ -221,10 +221,10 @@ export class AuthController {
         return;
       }
 
-      if (NewPassword.length < 8) {
+      if (NewPassword.length < 12) {
         res.status(400).json({
           Success: false,
-          Message: 'Password must be at least 8 characters long',
+          Message: 'Password must be at least 12 characters long',
         });
         return;
       }
