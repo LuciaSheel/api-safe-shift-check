@@ -99,7 +99,7 @@ export class UserController {
       if (req.body.TeamId !== undefined) updateData.TeamId = req.body.TeamId;
       if (req.body.AssignedBackupContactIds !== undefined) updateData.AssignedBackupContactIds = req.body.AssignedBackupContactIds;
       if (req.body.AssignedWorkerIds !== undefined) updateData.AssignedWorkerIds = req.body.AssignedWorkerIds;
-      if (req.body.Role !== undefined) updateData.Role = req.body.Role;
+      if (req.body.Role !== undefined && req.user?.Role === 'Administrator') updateData.Role = req.body.Role;
 
       const user = await userService.update(id, updateData);
 
