@@ -156,6 +156,19 @@ export class ShiftController {
   async endShift(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
+
+      const existing = await shiftService.findById(id);
+      if (!existing) {
+        res.status(404).json({ Success: false, Message: 'Shift not found' });
+        return;
+      }
+
+      const isManagerOrAdmin = req.user?.Role === 'Director' || req.user?.Role === 'Administrator';
+      if (!isManagerOrAdmin && existing.WorkerId !== req.user?.UserId) {
+        res.status(403).json({ Success: false, Message: 'You can only end your own shift' });
+        return;
+      }
+
       const shift = await shiftService.endShift(id);
 
       if (!shift) {
@@ -285,6 +298,18 @@ export class ShiftController {
     try {
       const { id } = req.params;
       const { AdditionalHours } = req.body;
+
+      const existing = await shiftService.findById(id);
+      if (!existing) {
+        res.status(404).json({ Success: false, Message: 'Shift not found' });
+        return;
+      }
+
+      if (existing.WorkerId !== req.user?.UserId) {
+        res.status(403).json({ Success: false, Message: 'You can only extend your own shift' });
+        return;
+      }
+
       const shift = await shiftService.extendShift(id, AdditionalHours);
 
       if (!shift) {
