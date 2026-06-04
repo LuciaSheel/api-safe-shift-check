@@ -136,6 +136,12 @@ export class ShiftController {
   async startShift(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { WorkerId, LocationId, EstimatedHours, Notes } = req.body;
+
+      if (WorkerId !== req.user?.UserId) {
+        res.status(403).json({ Success: false, Message: 'You can only start a shift for yourself' });
+        return;
+      }
+
       const shift = await shiftService.startShift(WorkerId, LocationId, EstimatedHours, Notes);
 
       res.status(201).json({
