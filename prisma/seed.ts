@@ -30,8 +30,8 @@ async function main(): Promise<void> {
   });
 
   // ── Users ──────────────────────────────────────────────────────────
-  const DEMO_HASH = await bcrypt.hash(process.env.SEED_DEMO_PASSWORD ?? 'demo123', 10);
-  const ADMIN_HASH = await bcrypt.hash(process.env.SEED_ADMIN_PASSWORD ?? 'admin123', 10);
+  const DEMO_HASH = await bcrypt.hash(process.env.SEED_DEMO_PASSWORD ?? 'DemoShift@1234', 12);
+  const ADMIN_HASH = await bcrypt.hash(process.env.SEED_ADMIN_PASSWORD ?? 'AdminShift@1234', 12);
 
   const users = [
     { Id: 'user-001', Email: 'sarah.johnson@example.com', Password: DEMO_HASH, FirstName: 'Sarah', LastName: 'Johnson', Role: 'Cleaner', Phone: '+1 (555) 123-4567', IsActive: true, AssignedBackupContactIds: ['user-006', 'user-007'], AssignedWorkerIds: [] },
