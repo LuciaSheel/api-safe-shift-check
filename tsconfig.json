@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "commonjs",
+    "module": "Node16",
     "lib": ["ES2020"],
     "outDir": "./dist",
     "rootDir": "./src",
@@ -13,11 +13,7 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    // "node10" is deprecated in TS 6+ but valid in this project's TS 5.9.3.
-    // VS Code may show a warning if its own TS version is newer — safe to ignore.
-    // To fix properly in future: migrate to "module": "node16" + "moduleResolution": "node16"
-    // and add .js extensions to all relative imports throughout src/.
-    "moduleResolution": "node10"
+    "moduleResolution": "node16"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
