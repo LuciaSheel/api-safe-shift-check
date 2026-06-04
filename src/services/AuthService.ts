@@ -18,7 +18,9 @@ import {
   CreateUserDto,
 } from '../types';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
+const JWT_SECRET: string =
+  process.env.JWT_SECRET ??
+  ((): never => { throw new Error('JWT_SECRET environment variable is required'); })();
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 // Convert time string to seconds for jwt.sign

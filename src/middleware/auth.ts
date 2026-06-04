@@ -8,7 +8,9 @@ import jwt from 'jsonwebtoken';
 import { TokenPayload, UserRole } from '../types';
 import { userRepository } from '../repositories';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
+const JWT_SECRET: string =
+  process.env.JWT_SECRET ??
+  ((): never => { throw new Error('JWT_SECRET environment variable is required'); })();
 
 // Extend Express Request type to include user
 declare global {
