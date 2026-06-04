@@ -128,11 +128,8 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
   authorize('Administrator')(req, res, next);
 }
 
-/**
- * Require admin role (for reports access)
- */
 export function requireManagerOrAdmin(req: Request, res: Response, next: NextFunction): void {
-  authorize('Administrator')(req, res, next);
+  authorize('Director', 'Administrator')(req, res, next);
 }
 
 /**
