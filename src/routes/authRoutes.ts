@@ -12,6 +12,7 @@ import {
   loginValidation,
   changePasswordValidation,
 } from '../middleware/validation';
+import { body } from 'express-validator';
 
 const router = Router();
 
@@ -66,7 +67,7 @@ router.post(
  * @desc    Request password reset
  * @access  Public
  */
-router.post('/reset-password', passwordResetLimiter, authController.resetPassword.bind(authController));
+router.post('/reset-password', passwordResetLimiter, validate([body('Email').isEmail().withMessage('Valid email is required')]), authController.resetPassword.bind(authController));
 
 /**
  * @route   GET /api/auth/reset-password/:token
