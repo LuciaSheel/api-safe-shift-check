@@ -1,11 +1,4 @@
-/**
- * Email Service
- * Abstraction for sending emails - can be swapped for real providers
- * (SendGrid, AWS SES, Mailgun, etc.)
- * 
- * For production, set EMAIL_PROVIDER environment variable and configure
- * the appropriate provider settings.
- */
+import { Resend } from 'resend';
 
 export interface EmailOptions {
   to: string;
@@ -42,43 +35,51 @@ class ConsoleEmailProvider implements IEmailProvider {
   }
 }
 
-// SMTP provider placeholder - implement with nodemailer for production
-// class SmtpEmailProvider implements IEmailProvider {
-//   async send(options: EmailOptions): Promise<EmailResult> {
-//     // Use nodemailer or similar
-//   }
-// }
+class ResendEmailProvider implements IEmailProvider {
+  private client: Resend;
+  private from: string;
 
-// SendGrid provider placeholder
-// class SendGridEmailProvider implements IEmailProvider {
-//   async send(options: EmailOptions): Promise<EmailResult> {
-//     // Use @sendgrid/mail
-//   }
-// }
+  constructor(apiKey: string, from: string) {
+    this.client = new Resend(apiKey);
+    this.from = from;
+  }
+
+  async send(options: EmailOptions): Promise<EmailResult> {
+    const { data, error } = await this.client.emails.send({
+      from: this.from,
+      to: options.to,
+      subject: options.subject,
+      text: options.text,
+      html: options.html,
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, messageId: data?.id };
+  }
+}
 
 export class EmailService {
   private provider: IEmailProvider;
-  private fromAddress: string;
   private appName: string;
   private appUrl: string;
 
   constructor() {
-    // Configure based on environment
     const providerType = process.env.EMAIL_PROVIDER || 'console';
-    
+    const fromAddress = process.env.EMAIL_FROM || 'noreply@safeonshift.ca';
+
     switch (providerType) {
-      // Add real providers here when needed:
-      // case 'sendgrid':
-      //   this.provider = new SendGridEmailProvider();
-      //   break;
-      // case 'smtp':
-      //   this.provider = new SmtpEmailProvider();
-      //   break;
+      case 'resend': {
+        const apiKey = process.env.RESEND_API_KEY || '';
+        this.provider = new ResendEmailProvider(apiKey, fromAddress);
+        break;
+      }
       default:
         this.provider = new ConsoleEmailProvider();
     }
 
-    this.fromAddress = process.env.EMAIL_FROM || 'noreply@safeonshift.com';
     this.appName = process.env.APP_NAME || 'Safe on Shift';
     this.appUrl = process.env.APP_URL || 'http://localhost:8080';
   }
