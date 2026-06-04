@@ -44,8 +44,8 @@ export const loginValidation = [
 export const registerValidation = [
   body('Email').isEmail().withMessage('Valid email is required'),
   body('Password')
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters'),
+    .isLength({ min: 12 })
+    .withMessage('Password must be at least 12 characters'),
   body('FirstName').notEmpty().withMessage('First name is required'),
   body('LastName').notEmpty().withMessage('Last name is required'),
   body('Phone').notEmpty().withMessage('Phone number is required'),
@@ -58,8 +58,8 @@ export const registerValidation = [
 export const changePasswordValidation = [
   body('CurrentPassword').notEmpty().withMessage('Current password is required'),
   body('NewPassword')
-    .isLength({ min: 6 })
-    .withMessage('New password must be at least 6 characters'),
+    .isLength({ min: 12 })
+    .withMessage('New password must be at least 12 characters'),
 ];
 
 // ============================================
@@ -69,8 +69,8 @@ export const changePasswordValidation = [
 export const createUserValidation = [
   body('Email').isEmail().withMessage('Valid email is required'),
   body('Password')
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters'),
+    .isLength({ min: 12 })
+    .withMessage('Password must be at least 12 characters'),
   body('FirstName').notEmpty().withMessage('First name is required'),
   body('LastName').notEmpty().withMessage('Last name is required'),
   body('Role')

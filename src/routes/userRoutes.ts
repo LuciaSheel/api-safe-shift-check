@@ -5,7 +5,7 @@
 
 import { Router } from 'express';
 import { userController } from '../controllers';
-import { authenticate, requireManagerOrAdmin, requireAdmin } from '../middleware/auth';
+import { authenticate, requireManagerOrAdmin, requireAdmin, requireSelfOrAdmin } from '../middleware/auth';
 import {
   validate,
   createUserValidation,
@@ -89,6 +89,7 @@ router.post(
  */
 router.put(
   '/:id',
+  requireSelfOrAdmin,
   validate([...idParamValidation, ...updateUserValidation]),
   userController.update.bind(userController)
 );

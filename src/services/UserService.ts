@@ -35,7 +35,7 @@ export class UserService {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(data.Password, 10);
+    const hashedPassword = await bcrypt.hash(data.Password, 12);
 
     return userRepository.create({
       ...data,

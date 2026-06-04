@@ -5,7 +5,7 @@
 
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import jwt, { SignOptions } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { userRepository } from '../repositories';
 import { prisma } from '../lib/prisma';
@@ -87,7 +87,7 @@ export class AuthService {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(data.Password, 10);
+    const hashedPassword = await bcrypt.hash(data.Password, 12);
 
     // Create user
     const user = await userRepository.create({
@@ -119,7 +119,7 @@ export class AuthService {
       throw new Error('Current password is incorrect');
     }
 
-    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    const hashedNewPassword = await bcrypt.hash(newPassword, 12);
     return await userRepository.updatePassword(userId, hashedNewPassword);
   }
 
@@ -189,7 +189,7 @@ export class AuthService {
     if (!resetToken) throw new Error('Invalid or expired reset token');
     if (resetToken.ExpiresAt < new Date()) throw new Error('Reset token has expired');
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
     const updated = await userRepository.updatePassword(resetToken.UserId, hashedPassword);
     if (!updated) throw new Error('Failed to update password');
 

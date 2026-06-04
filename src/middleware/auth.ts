@@ -14,6 +14,7 @@ const JWT_SECRET: string =
 
 // Extend Express Request type to include user
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       user?: TokenPayload;
@@ -139,4 +140,19 @@ export function requireManagerOrAdmin(req: Request, res: Response, next: NextFun
  */
 export function requireWorker(req: Request, res: Response, next: NextFunction): void {
   authorize('Cleaner', 'Booker', 'Director', 'Administrator')(req, res, next);
+}
+
+/**
+ * Allow access only if the user is an admin or is updating their own record
+ */
+export function requireSelfOrAdmin(req: Request, res: Response, next: NextFunction): void {
+  if (!req.user) {
+    res.status(401).json({ Success: false, Message: 'Unauthorized' });
+    return;
+  }
+  if (req.user.Role === 'Administrator' || req.user.UserId === req.params.id) {
+    next();
+    return;
+  }
+  res.status(403).json({ Success: false, Message: 'Forbidden - Insufficient permissions' });
 }
