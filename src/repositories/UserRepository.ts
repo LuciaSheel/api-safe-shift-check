@@ -155,7 +155,24 @@ export class UserRepository implements IBaseRepository<User, CreateUserDto, Upda
 
   async delete(id: string): Promise<boolean> {
     try {
-      await prisma.user.delete({ where: { Id: id } });
+      await prisma.$transaction(async (tx) => {
+        const shifts = await tx.shift.findMany({
+          where: { WorkerId: id },
+          select: { Id: true },
+        });
+        const shiftIds = shifts.map(s => s.Id);
+
+        await tx.passwordResetToken.deleteMany({ where: { UserId: id } });
+        await tx.notification.deleteMany({ where: { UserId: id } });
+
+        if (shiftIds.length > 0) {
+          await tx.checkIn.deleteMany({ where: { ShiftId: { in: shiftIds } } });
+          await tx.alert.deleteMany({ where: { ShiftId: { in: shiftIds } } });
+          await tx.shift.deleteMany({ where: { WorkerId: id } });
+        }
+
+        await tx.user.delete({ where: { Id: id } });
+      });
       return true;
     } catch {
       return false;
